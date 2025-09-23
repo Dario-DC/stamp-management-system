@@ -1,9 +1,4 @@
--- Stamp Mana-- Table 2: Postage Rates
--- Stores current postage rates for stamps (can be updated)
-CREATE TABLE IF NOT EXISTS postage_rates (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    rate INTEGER NOT NULL, -- postage rate in cents of euros System Database Schema
+-- Stamp Management System Database Schema
 
 -- Table 1: Stamp Collection
 -- Stores information about stamps in the collection with their values and quantities
