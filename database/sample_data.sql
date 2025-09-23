@@ -9,8 +9,8 @@ INSERT INTO stamp_collection (name, val, n) VALUES
     ('Commemorative Europe Stamp', 150, 30),
     ('Vintage Classic Stamp', 95, 40);
 
--- Insert sample tariff data
-INSERT INTO stamp_tariffs (name, tariff) VALUES
+-- Insert sample postage rate data
+INSERT INTO postage_rates (name, rate) VALUES
     ('Standard Letter', 120),
     ('Priority Mail', 180),
     ('International Letter', 250),

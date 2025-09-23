@@ -78,48 +78,48 @@ class Database:
             conn.commit()
             return cursor.rowcount > 0
     
-    # Stamp Tariffs Methods
-    def add_stamp_tariff(self, name, tariff):
-        """Add or update a stamp tariff."""
+    # Postage Rates Methods
+    def add_postage_rate(self, name, rate):
+        """Add or update a postage rate."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR REPLACE INTO stamp_tariffs (name, tariff) VALUES (?, ?)",
-                (name, tariff)
+                "INSERT OR REPLACE INTO postage_rates (name, rate) VALUES (?, ?)",
+                (name, rate)
             )
             conn.commit()
             return cursor.lastrowid
     
-    def get_stamp_tariffs(self):
-        """Get all stamp tariffs."""
+    def get_postage_rates(self):
+        """Get all postage rates."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM stamp_tariffs ORDER BY name")
+            cursor.execute("SELECT * FROM postage_rates ORDER BY name")
             return cursor.fetchall()
     
-    def get_tariff_by_name(self, name):
-        """Get a specific tariff by name."""
+    def get_rate_by_name(self, name):
+        """Get a specific rate by name."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM stamp_tariffs WHERE name = ?", (name,))
+            cursor.execute("SELECT * FROM postage_rates WHERE name = ?", (name,))
             return cursor.fetchone()
     
-    def update_tariff(self, name, new_tariff):
-        """Update a stamp tariff."""
+    def update_rate(self, name, new_rate):
+        """Update a postage rate."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE stamp_tariffs SET tariff = ? WHERE name = ?",
-                (new_tariff, name)
+                "UPDATE postage_rates SET rate = ? WHERE name = ?",
+                (new_rate, name)
             )
             conn.commit()
             return cursor.rowcount > 0
     
-    def delete_tariff(self, name):
-        """Delete a stamp tariff."""
+    def delete_rate(self, name):
+        """Delete a postage rate."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM stamp_tariffs WHERE name = ?", (name,))
+            cursor.execute("DELETE FROM postage_rates WHERE name = ?", (name,))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -137,6 +137,6 @@ if __name__ == "__main__":
     for stamp in db.get_stamp_collection():
         print(f"  {stamp[1]}: {stamp[2]}¢ ({stamp[3]} stamps)")
     
-    print("\nStamp Tariffs:")
-    for tariff in db.get_stamp_tariffs():
-        print(f"  {tariff[1]}: {tariff[2]}¢")
+    print("\nPostage Rates:")
+    for rate in db.get_postage_rates():
+        print(f"  {rate[1]}: {rate[2]}¢")

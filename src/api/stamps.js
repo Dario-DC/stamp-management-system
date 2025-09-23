@@ -1,6 +1,6 @@
 /**
  * Database API Interface for Stamp Management System
- * This module will interface with the backend API to manage stamps and tariffs
+ * This module will interface with the backend API to manage stamps and postage rates
  */
 
 class StampAPI {
@@ -58,27 +58,27 @@ class StampAPI {
         });
     }
 
-    // Stamp Tariffs Methods
-    async getStampTariffs() {
-        return this.request('/stamps/tariffs');
+    // Postage Rates Methods
+    async getPostageRates() {
+        return this.request('/stamps/postage-rates');
     }
 
-    async addStampTariff(name, tariff) {
-        return this.request('/stamps/tariffs', {
+    async addPostageRate(name, rate) {
+        return this.request('/stamps/postage-rates', {
             method: 'POST',
-            body: JSON.stringify({ name, tariff })
+            body: JSON.stringify({ name, rate })
         });
     }
 
-    async updateTariff(name, tariff) {
-        return this.request(`/stamps/tariffs/${encodeURIComponent(name)}`, {
+    async updateRate(name, rate) {
+        return this.request(`/stamps/postage-rates/${encodeURIComponent(name)}`, {
             method: 'PUT',
-            body: JSON.stringify({ tariff })
+            body: JSON.stringify({ rate })
         });
     }
 
-    async deleteTariff(name) {
-        return this.request(`/stamps/tariffs/${encodeURIComponent(name)}`, {
+    async deleteRate(name) {
+        return this.request(`/stamps/postage-rates/${encodeURIComponent(name)}`, {
             method: 'DELETE'
         });
     }
@@ -115,10 +115,10 @@ const mockData = {
         { id: 2, name: 'Priority Mail Stamp', val: 180, n: 25, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         { id: 3, name: 'International Stamp', val: 250, n: 15, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ],
-    tariffs: [
-        { id: 1, name: 'Standard Letter', tariff: 120, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 2, name: 'Priority Mail', tariff: 180, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 3, name: 'International Letter', tariff: 250, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    postageRates: [
+        { id: 1, name: 'Standard Letter', rate: 120, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 2, name: 'Priority Mail', rate: 180, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 3, name: 'International Letter', rate: 250, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ]
 };
 
@@ -163,27 +163,27 @@ class MockStampAPI extends StampAPI {
             } else if (method === 'DELETE' && stampIndex !== -1) {
                 return this.data.collection.splice(stampIndex, 1)[0];
             }
-        } else if (endpoint === '/stamps/tariffs') {
+        } else if (endpoint === '/stamps/postage-rates') {
             if (method === 'GET') {
-                return this.data.tariffs;
+                return this.data.postageRates;
             } else if (method === 'POST') {
-                const existingIndex = this.data.tariffs.findIndex(t => t.name === body.name);
+                const existingIndex = this.data.postageRates.findIndex(r => r.name === body.name);
                 if (existingIndex !== -1) {
-                    this.data.tariffs[existingIndex] = {
-                        ...this.data.tariffs[existingIndex],
-                        tariff: body.tariff,
+                    this.data.postageRates[existingIndex] = {
+                        ...this.data.postageRates[existingIndex],
+                        rate: body.rate,
                         updated_at: new Date().toISOString()
                     };
-                    return this.data.tariffs[existingIndex];
+                    return this.data.postageRates[existingIndex];
                 } else {
-                    const newTariff = {
-                        id: Math.max(...this.data.tariffs.map(t => t.id)) + 1,
+                    const newRate = {
+                        id: Math.max(...this.data.postageRates.map(r => r.id)) + 1,
                         ...body,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     };
-                    this.data.tariffs.push(newTariff);
-                    return newTariff;
+                    this.data.postageRates.push(newRate);
+                    return newRate;
                 }
             }
         }

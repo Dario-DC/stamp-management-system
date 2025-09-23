@@ -20,11 +20,11 @@ Stores information about stamps in your collection:
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
 
-### stamp_tariffs table
-Stores current postage tariffs for stamps:
+### postage_rates table
+Stores current postage rates for stamps:
 - `id` - Primary key (auto-increment)
 - `name` - Name of the stamp type (TEXT, UNIQUE)
-- `tariff` - Postage tariff in cents of euros (INTEGER)
+- `rate` - Postage rate in cents of euros (INTEGER)
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
 
@@ -39,11 +39,11 @@ db.add_stamp_to_collection("New Stamp", 150, 10)
 # Get all stamps in collection
 stamps = db.get_stamp_collection()
 
-# Add/update a tariff
-db.add_stamp_tariff("Standard Letter", 120)
+# Add/update a postage rate
+db.add_postage_rate("Standard Letter", 120)
 
-# Get all tariffs
-tariffs = db.get_stamp_tariffs()
+# Get all postage rates
+rates = db.get_postage_rates()
 ```
 
 ## Initialize Database
