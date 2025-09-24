@@ -4,7 +4,7 @@
  */
 
 class StampAPI {
-    constructor(baseUrl = '/api') {
+    constructor(baseUrl = import.meta.env.VITE_API_BASE_URL || '/api') {
         this.baseUrl = baseUrl;
     }
 
@@ -108,6 +108,20 @@ class StampAPI {
 // Create a global API instance
 const stampAPI = new StampAPI();
 
+// Helper function to detect if backend is available
+async function checkBackendAvailability() {
+    try {
+        const response = await fetch('/api/stamps/collection', { 
+            method: 'GET',
+            signal: AbortSignal.timeout(2000) // 2 second timeout
+        });
+        return response.ok;
+    } catch (error) {
+        console.warn('Backend not available, falling back to mock API:', error.message);
+        return false;
+    }
+}
+
 // For development/demo purposes - Mock data when backend is not available
 const mockData = {
     collection: [
@@ -192,7 +206,38 @@ class MockStampAPI extends StampAPI {
     }
 }
 
-// Use mock API for development
-const api = new MockStampAPI();
+// Auto-detect backend and create appropriate API instance
+let api;
 
-export { StampAPI, MockStampAPI, api as default };
+// Initialize API based on backend availability
+async function initializeAPI() {
+    const backendAvailable = await checkBackendAvailability();
+    
+    if (backendAvailable) {
+        console.log('✅ Backend detected - using real API');
+        api = new StampAPI();
+    } else {
+        console.log('🔄 Backend not available - using mock API');
+        api = new MockStampAPI();
+    }
+    
+    return api;
+}
+
+// Create API instance (will be resolved when first accessed)
+const apiPromise = initializeAPI();
+
+// Export a proxy that waits for API initialization
+const apiProxy = new Proxy({}, {
+    get(target, prop) {
+        if (typeof prop === 'string' && typeof StampAPI.prototype[prop] === 'function') {
+            return async (...args) => {
+                const resolvedApi = await apiPromise;
+                return resolvedApi[prop].apply(resolvedApi, args);
+            };
+        }
+        return target[prop];
+    }
+});
+
+export { StampAPI, MockStampAPI, apiProxy as default, checkBackendAvailability };
