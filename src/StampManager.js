@@ -8,6 +8,9 @@ import api from './api/stamps.js';
 class StampManager {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
+        if (!this.container) {
+            throw new Error(`Container with id '${containerId}' not found`);
+        }
         this.stamps = [];
         this.rates = [];
         this.init();

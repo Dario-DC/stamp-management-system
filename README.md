@@ -89,7 +89,7 @@ npm run preview
 
 ## 🧪 Testing
 
-The project uses **Vitest** for testing with separate configurations for frontend and backend.
+The project uses **Vitest** for testing with separate configurations for frontend and backend. Total coverage: **50 tests** (38 frontend + 12 backend).
 
 ### Test Commands
 
@@ -122,17 +122,25 @@ npm run test:all
 
 ### Test Coverage
 
-**Frontend Tests (15 tests):**
-- Component functionality
-- Utility functions
-- DOM manipulation
-- Mock API behavior
+**Frontend Tests (38 tests):**
+- **main.test.js** (8 tests): Application initialization and setup
+- **stamp-manager.test.js** (20 tests): Complete StampManager component integration testing
+  - Component initialization and UI structure
+  - Data loading with API integration
+  - UI rendering for stamps and rates
+  - Tab navigation functionality
+  - Modal operations (add/edit forms)
+  - CRUD operations with form validation
+  - Error handling and user feedback
+- **combRep.test.js** (10 tests): Mathematical combination algorithms
 
 **Backend Tests (12 tests):**
-- API endpoint integration
-- CRUD operations for stamps and postage rates
-- Input validation and error handling
-- HTTP status codes and responses
+- **backend.test.js**: Full API endpoint integration testing
+  - Health check endpoints
+  - Stamp collection CRUD operations
+  - Postage rates management
+  - Input validation and error handling
+  - HTTP status codes and responses
 
 **Manual API Testing:**
 ```bash
