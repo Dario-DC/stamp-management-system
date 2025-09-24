@@ -2,8 +2,10 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.js']
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    // Exclude backend tests (they have their own config)
+    exclude: ['**/backend.test.js', '**/node_modules/**']
   }
 })
