@@ -4,8 +4,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { app, db } from '../../backend/server.js';
 
-const API_BASE_URL = 'http://localhost:3001';
+let server;
+let API_BASE_URL;
 
 // Helper function to make API requests
 async function apiRequest(endpoint, options = {}) {
@@ -28,17 +30,28 @@ async function apiRequest(endpoint, options = {}) {
 
 describe('Stamp Management API Integration Tests', () => {
     beforeAll(async () => {
-        // Wait for server to be ready
-        let attempts = 0;
-        while (attempts < 10) {
-            try {
-                const { response } = await apiRequest('/health');
-                if (response.ok) break;
-            } catch (error) {
-                // Server not ready yet
-            }
-            await new Promise(resolve => setTimeout(resolve, 500));
-            attempts++;
+        // Start test server on a random available port
+        return new Promise((resolve, reject) => {
+            server = app.listen(0, 'localhost', () => {
+                const port = server.address().port;
+                API_BASE_URL = `http://localhost:${port}`;
+                console.log(`Test server started on ${API_BASE_URL}`);
+                resolve();
+            });
+            
+            server.on('error', reject);
+        });
+    });
+
+    afterAll(async () => {
+        // Close the test server and database
+        if (server) {
+            await new Promise((resolve) => {
+                server.close(resolve);
+            });
+        }
+        if (db) {
+            db.close();
         }
     });
 
@@ -65,7 +78,8 @@ describe('Stamp Management API Integration Tests', () => {
         it('should add a new stamp', async () => {
             const newStamp = {
                 name: 'Test Stamp Vitest',
-                val: 100,
+                value: 1.00,
+                currency: 'EUR',
                 n: 5
             };
 
@@ -77,7 +91,8 @@ describe('Stamp Management API Integration Tests', () => {
             expect(response.status).toBe(201);
             expect(data).toHaveProperty('id');
             expect(data.name).toBe(newStamp.name);
-            expect(data.val).toBe(newStamp.val);
+            expect(data.value).toBe(newStamp.value);
+            expect(data.currency).toBe(newStamp.currency);
             expect(data.n).toBe(newStamp.n);
         });
 
@@ -85,7 +100,7 @@ describe('Stamp Management API Integration Tests', () => {
             // First add a stamp
             const { data: newStamp } = await apiRequest('/api/stamps/collection', {
                 method: 'POST',
-                body: JSON.stringify({ name: 'Update Test Vitest', val: 150, n: 10 })
+                body: JSON.stringify({ name: 'Update Test Vitest', value: 1.50, currency: 'EUR', n: 10 })
             });
 
             const stampId = newStamp.id;
@@ -104,7 +119,7 @@ describe('Stamp Management API Integration Tests', () => {
             // First add a stamp
             const { data: newStamp } = await apiRequest('/api/stamps/collection', {
                 method: 'POST',
-                body: JSON.stringify({ name: 'Delete Test Vitest', val: 200, n: 1 })
+                body: JSON.stringify({ name: 'Delete Test Vitest', value: 2.00, currency: 'EUR', n: 1 })
             });
 
             const stampId = newStamp.id;
@@ -125,7 +140,7 @@ describe('Stamp Management API Integration Tests', () => {
             // Test invalid data
             const { response } = await apiRequest('/api/stamps/collection', {
                 method: 'POST',
-                body: JSON.stringify({ name: '', val: -100, n: -1 })
+                body: JSON.stringify({ name: '', value: -100, currency: 'INVALID', n: -1 })
             });
 
             expect(response.status).toBe(400);
@@ -143,7 +158,8 @@ describe('Stamp Management API Integration Tests', () => {
         it('should add a new postage rate', async () => {
             const newRate = {
                 name: 'Test Rate Vitest',
-                rate: 300
+                value: 3.00,
+                max_weight: 100
             };
 
             const { response, data } = await apiRequest('/api/stamps/postage-rates', {
@@ -153,7 +169,8 @@ describe('Stamp Management API Integration Tests', () => {
 
             expect(response.status).toBe(201);
             expect(data.name).toBe(newRate.name);
-            expect(data.rate).toBe(newRate.rate);
+            expect(data.value).toBe(newRate.value);
+            expect(data.max_weight).toBe(newRate.max_weight);
         });
 
         it('should update a postage rate', async () => {
@@ -162,18 +179,20 @@ describe('Stamp Management API Integration Tests', () => {
             // First add a rate
             await apiRequest('/api/stamps/postage-rates', {
                 method: 'POST',
-                body: JSON.stringify({ name: rateName, rate: 400 })
+                body: JSON.stringify({ name: rateName, value: 4.00, max_weight: 50 })
             });
 
             // Then update it
-            const newRateValue = 500;
+            const newRateValue = 5.00;
+            const newMaxWeight = 75;
             const { response, data } = await apiRequest(`/api/stamps/postage-rates/${encodeURIComponent(rateName)}`, {
                 method: 'PUT',
-                body: JSON.stringify({ rate: newRateValue })
+                body: JSON.stringify({ value: newRateValue, max_weight: newMaxWeight })
             });
 
             expect(response.status).toBe(200);
-            expect(data.rate).toBe(newRateValue);
+            expect(data.value).toBe(newRateValue);
+            expect(data.max_weight).toBe(newMaxWeight);
         });
 
         it('should delete a postage rate', async () => {
@@ -182,7 +201,7 @@ describe('Stamp Management API Integration Tests', () => {
             // First add a rate
             await apiRequest('/api/stamps/postage-rates', {
                 method: 'POST',
-                body: JSON.stringify({ name: rateName, rate: 600 })
+                body: JSON.stringify({ name: rateName, value: 6.00, max_weight: 200 })
             });
 
             // Then delete it

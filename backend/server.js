@@ -96,29 +96,39 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-    console.log(`🚀 Stamp Management API Server running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    console.log(`🏷️  API base URL: http://localhost:${PORT}/api`);
-    
-    // Load sample data on first run (development only)
-    if (process.env.NODE_ENV !== 'production') {
-        try {
-            // Check if database is empty
-            const stamps = db.getStampCollection();
-            const rates = db.getPostageRates();
-            
-            if (stamps.length === 0 && rates.length === 0) {
-                console.log('🌱 Loading sample data...');
-                db.loadSampleData();
-                console.log('✅ Sample data loaded successfully');
+// Function to start server
+function startServer() {
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Stamp Management API Server running on port ${PORT}`);
+        console.log(`📊 Health check: http://localhost:${PORT}/health`);
+        console.log(`🏷️  API base URL: http://localhost:${PORT}/api`);
+        
+        // Load sample data on first run (development only)
+        if (process.env.NODE_ENV !== 'production') {
+            try {
+                // Check if database is empty
+                const stamps = db.getStampCollection();
+                const rates = db.getPostageRates();
+                
+                if (stamps.length === 0 && rates.length === 0) {
+                    console.log('🌱 Loading sample data...');
+                    db.loadSampleData();
+                    console.log('✅ Sample data loaded successfully');
+                }
+            } catch (error) {
+                console.error('⚠️  Error loading sample data:', error.message);
             }
-        } catch (error) {
-            console.error('⚠️  Error loading sample data:', error.message);
         }
-    }
-});
+    });
+    
+    return server;
+}
 
-export { app, db };
+// Start server only if this file is run directly (not imported)
+let server;
+if (import.meta.url === `file://${process.argv[1]}`) {
+    server = startServer();
+}
+
+export { app, db, startServer };
 export default server;

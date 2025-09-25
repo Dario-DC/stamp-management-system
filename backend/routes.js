@@ -23,13 +23,16 @@ const handleValidationErrors = (req, res, next) => {
 // Validation rules
 const stampValidation = [
     body('name').isString().isLength({ min: 1, max: 255 }).trim(),
-    body('val').isInt({ min: 1 }).withMessage('Value must be a positive integer (cents)'),
-    body('n').optional().isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer')
+    body('value').isNumeric().withMessage('Value must be a positive number'),
+    body('currency').isIn(['ITL', 'EUR']).withMessage('Currency must be ITL or EUR'),
+    body('n').optional().isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer'),
+    body('postage_rate_id').optional().isInt({ min: 1 }).withMessage('Postage rate ID must be a positive integer')
 ];
 
 const rateValidation = [
     body('name').isString().isLength({ min: 1, max: 255 }).trim(),
-    body('rate').isInt({ min: 1 }).withMessage('Rate must be a positive integer (cents)')
+    body('value').isNumeric().withMessage('Value must be a positive number'),
+    body('max_weight').isInt({ min: 1 }).withMessage('Max weight must be a positive integer (grams)')
 ];
 
 const idValidation = [
@@ -69,8 +72,8 @@ export default function createRoutes(db) {
     // POST /api/stamps/collection - Add new stamp
     router.post('/stamps/collection', stampValidation, handleValidationErrors, (req, res) => {
         try {
-            const { name, val, n = 1 } = req.body;
-            const newStamp = db.addStampToCollection(name, val, n);
+            const { name, value, currency, n = 1, postage_rate_id = null } = req.body;
+            const newStamp = db.addStampToCollection(name, value, currency, n, postage_rate_id);
             
             // Fetch the complete stamp record
             const fullStamp = db.getStampById(newStamp.id);
@@ -109,8 +112,8 @@ export default function createRoutes(db) {
         handleValidationErrors, 
         (req, res) => {
             try {
-                const { name, val, n } = req.body;
-                const updated = db.updateStamp(req.params.id, name, val, n);
+                const { name, value, currency, n, postage_rate_id = null } = req.body;
+                const updated = db.updateStamp(req.params.id, name, value, currency, n, postage_rate_id);
                 
                 if (!updated) {
                     return res.status(404).json({ error: 'Stamp not found' });
@@ -136,6 +139,43 @@ export default function createRoutes(db) {
         } catch (error) {
             console.error('Error deleting stamp:', error);
             res.status(500).json({ error: 'Failed to delete stamp' });
+        }
+    });
+
+    // GET /api/stamps/collection/currency/:currency - Get stamps by currency
+    router.get('/stamps/collection/currency/:currency', (req, res) => {
+        try {
+            const currency = req.params.currency.toUpperCase();
+            if (!['EUR', 'ITL'].includes(currency)) {
+                return res.status(400).json({ error: 'Invalid currency. Must be EUR or ITL' });
+            }
+            const stamps = db.getStampsByCurrency(currency);
+            res.json(stamps);
+        } catch (error) {
+            console.error('Error fetching stamps by currency:', error);
+            res.status(500).json({ error: 'Failed to fetch stamps by currency' });
+        }
+    });
+
+    // GET /api/stamps/collection/postage-rate/:id - Get stamps by postage rate
+    router.get('/stamps/collection/postage-rate/:id', idValidation, handleValidationErrors, (req, res) => {
+        try {
+            const stamps = db.getStampsByPostageRate(req.params.id);
+            res.json(stamps);
+        } catch (error) {
+            console.error('Error fetching stamps by postage rate:', error);
+            res.status(500).json({ error: 'Failed to fetch stamps by postage rate' });
+        }
+    });
+
+    // GET /api/stamps/collection/stats - Get collection statistics
+    router.get('/stamps/collection/stats', (req, res) => {
+        try {
+            const stats = db.getCollectionStats();
+            res.json(stats);
+        } catch (error) {
+            console.error('Error fetching collection statistics:', error);
+            res.status(500).json({ error: 'Failed to fetch collection statistics' });
         }
     });
 
@@ -167,11 +207,25 @@ export default function createRoutes(db) {
         }
     });
 
+    // GET /api/stamps/postage-rates/id/:id - Get specific rate by ID
+    router.get('/stamps/postage-rates/id/:id', idValidation, handleValidationErrors, (req, res) => {
+        try {
+            const rate = db.getRateById(req.params.id);
+            if (!rate) {
+                return res.status(404).json({ error: 'Postage rate not found' });
+            }
+            res.json(rate);
+        } catch (error) {
+            console.error('Error fetching postage rate:', error);
+            res.status(500).json({ error: 'Failed to fetch postage rate' });
+        }
+    });
+
     // POST /api/stamps/postage-rates - Add or update postage rate
     router.post('/stamps/postage-rates', rateValidation, handleValidationErrors, (req, res) => {
         try {
-            const { name, rate } = req.body;
-            const result = db.addPostageRate(name, rate);
+            const { name, value, max_weight } = req.body;
+            const result = db.addPostageRate(name, value, max_weight);
             
             if (!result) {
                 return res.status(500).json({ error: 'Failed to add postage rate' });
@@ -186,13 +240,13 @@ export default function createRoutes(db) {
 
     // PUT /api/stamps/postage-rates/:name - Update postage rate
     router.put('/stamps/postage-rates/:name', 
-        [body('rate').isInt({ min: 1 })], 
+        [body('value').isNumeric(), body('max_weight').isInt({ min: 1 })], 
         handleValidationErrors, 
         (req, res) => {
             try {
                 const rateName = decodeURIComponent(req.params.name);
-                const { rate } = req.body;
-                const updated = db.updateRateByName(rateName, rate);
+                const { value, max_weight } = req.body;
+                const updated = db.updateRateByName(rateName, value, max_weight);
                 
                 if (!updated) {
                     return res.status(404).json({ error: 'Postage rate not found' });
@@ -207,11 +261,47 @@ export default function createRoutes(db) {
         }
     );
 
+    // PUT /api/stamps/postage-rates/id/:id - Update postage rate by ID
+    router.put('/stamps/postage-rates/id/:id', 
+        [...idValidation, body('name').isString().isLength({ min: 1, max: 255 }).trim(), body('value').isNumeric(), body('max_weight').isInt({ min: 1 })], 
+        handleValidationErrors, 
+        (req, res) => {
+            try {
+                const { name, value, max_weight } = req.body;
+                const updated = db.updateRateById(req.params.id, name, value, max_weight);
+                
+                if (!updated) {
+                    return res.status(404).json({ error: 'Postage rate not found' });
+                }
+                
+                const updatedRate = db.getRateById(req.params.id);
+                res.json(updatedRate);
+            } catch (error) {
+                console.error('Error updating postage rate:', error);
+                res.status(500).json({ error: 'Failed to update postage rate' });
+            }
+        }
+    );
+
     // DELETE /api/stamps/postage-rates/:name - Delete postage rate
     router.delete('/stamps/postage-rates/:name', (req, res) => {
         try {
             const rateName = decodeURIComponent(req.params.name);
             const deleted = db.deleteRateByName(rateName);
+            if (!deleted) {
+                return res.status(404).json({ error: 'Postage rate not found' });
+            }
+            res.status(204).send();
+        } catch (error) {
+            console.error('Error deleting postage rate:', error);
+            res.status(500).json({ error: 'Failed to delete postage rate' });
+        }
+    });
+
+    // DELETE /api/stamps/postage-rates/id/:id - Delete postage rate by ID
+    router.delete('/stamps/postage-rates/id/:id', idValidation, handleValidationErrors, (req, res) => {
+        try {
+            const deleted = db.deleteRateById(req.params.id);
             if (!deleted) {
                 return res.status(404).json({ error: 'Postage rate not found' });
             }

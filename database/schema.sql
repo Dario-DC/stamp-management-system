@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS stamps (
     name TEXT NOT NULL,
     value DECIMAL(10,2) NOT NULL, -- original stamp value (ITL or EUR)
     currency TEXT NOT NULL CHECK (currency IN ('ITL', 'EUR')), -- currency type
-    euro_cents INTEGER NOT NULL, -- current value in euro cents
+    euro_cents INTEGER NOT NULL DEFAULT 0, -- current value in euro cents
     n INTEGER NOT NULL DEFAULT 0, -- number of stamps
     postage_rate_id INTEGER, -- reference to postage_rates
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -90,14 +90,14 @@ BEGIN
     SET euro_cents = CASE 
         WHEN NEW.currency = 'EUR' THEN CAST(NEW.value * 100 AS INTEGER)
         WHEN NEW.currency = 'ITL' THEN CAST(NEW.value / 1936.27 * 100 AS INTEGER)
-        ELSE NEW.euro_cents
+        ELSE 0
     END
     WHERE id = NEW.id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS calculate_euro_cents_on_update
     AFTER UPDATE ON stamps
-    WHEN NEW.currency != OLD.currency OR NEW.value != OLD.value OR NEW.postage_rate_id != OLD.postage_rate_id
+    WHEN NEW.currency != OLD.currency OR NEW.value != OLD.value
 BEGIN
     UPDATE stamps 
     SET euro_cents = CASE 

@@ -13,7 +13,6 @@
     "test:backend": "vitest --config vitest.backend.config.js",
     "test:backend:run": "vitest run --config vitest.backend.config.js",
     "test:all": "npm run test:run && npm run test:backend:run",
-    "test:api": "node test-api.js",
     "server": "node backend/server.js",
     "server:dev": "nodemon backend/server.js",
     "start": "concurrently \"npm run server:dev\" \"npm run dev\""

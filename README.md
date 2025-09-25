@@ -114,6 +114,8 @@ npm run test:backend:run
 npm run test:backend
 ```
 
+> **Note**: Backend tests automatically start and stop their own test server, so no manual server setup is required.
+
 **All Tests:**
 ```bash
 # Run both frontend and backend tests

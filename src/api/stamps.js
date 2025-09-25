@@ -38,10 +38,10 @@ class StampAPI {
         return this.request('/stamps/collection');
     }
 
-    async addStampToCollection(name, val, n = 1) {
+    async addStampToCollection(name, value, currency, n = 1, postage_rate_id = null) {
         return this.request('/stamps/collection', {
             method: 'POST',
-            body: JSON.stringify({ name, val, n })
+            body: JSON.stringify({ name, value, currency, n, postage_rate_id })
         });
     }
 
@@ -63,17 +63,17 @@ class StampAPI {
         return this.request('/stamps/postage-rates');
     }
 
-    async addPostageRate(name, rate) {
+    async addPostageRate(name, value, max_weight) {
         return this.request('/stamps/postage-rates', {
             method: 'POST',
-            body: JSON.stringify({ name, rate })
+            body: JSON.stringify({ name, value, max_weight })
         });
     }
 
-    async updateRate(name, rate) {
+    async updateRate(name, value, max_weight) {
         return this.request(`/stamps/postage-rates/${encodeURIComponent(name)}`, {
             method: 'PUT',
-            body: JSON.stringify({ rate })
+            body: JSON.stringify({ value, max_weight })
         });
     }
 
@@ -81,6 +81,30 @@ class StampAPI {
         return this.request(`/stamps/postage-rates/${encodeURIComponent(name)}`, {
             method: 'DELETE'
         });
+    }
+
+    // Additional methods for the updated schema
+    async getStampById(id) {
+        return this.request(`/stamps/collection/${id}`);
+    }
+
+    async updateStamp(id, name, value, currency, n, postage_rate_id = null) {
+        return this.request(`/stamps/collection/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ name, value, currency, n, postage_rate_id })
+        });
+    }
+
+    async getStampsByCurrency(currency) {
+        return this.request(`/stamps/collection/currency/${currency}`);
+    }
+
+    async getCollectionStats() {
+        return this.request('/stamps/stats');
+    }
+
+    async getTotalCollectionValue() {
+        return this.request('/stamps/value');
     }
 
     /**
@@ -102,6 +126,32 @@ class StampAPI {
      */
     centsToEuros(cents) {
         return cents / 100;
+    }
+
+    /**
+     * Helper method to convert ITL to EUR
+     */
+    itlToEur(itlValue) {
+        return itlValue / 1936.27;
+    }
+
+    /**
+     * Helper method to convert EUR to ITL
+     */
+    eurToItl(eurValue) {
+        return eurValue * 1936.27;
+    }
+
+    /**
+     * Helper method to calculate euro_cents from value and currency
+     */
+    calculateEuroCents(value, currency) {
+        if (currency === 'EUR') {
+            return Math.round(value * 100);
+        } else if (currency === 'ITL') {
+            return Math.round((value / 1936.27) * 100);
+        }
+        throw new Error('Invalid currency. Must be EUR or ITL');
     }
 }
 
@@ -125,14 +175,15 @@ async function checkBackendAvailability() {
 // For development/demo purposes - Mock data when backend is not available
 const mockData = {
     collection: [
-        { id: 1, name: 'Standard Letter Stamp', val: 120, n: 50, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 2, name: 'Priority Mail Stamp', val: 180, n: 25, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 3, name: 'International Stamp', val: 250, n: 15, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        { id: 1, name: 'Standard Letter Stamp', value: 1.20, currency: 'EUR', euro_cents: 120, n: 50, postage_rate_id: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 2, name: 'Priority Mail Stamp', value: 1.80, currency: 'EUR', euro_cents: 180, n: 25, postage_rate_id: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 3, name: 'International Stamp', value: 2.50, currency: 'EUR', euro_cents: 250, n: 15, postage_rate_id: 3, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 4, name: 'Vintage Italian Stamp', value: 500, currency: 'ITL', euro_cents: 26, n: 10, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ],
     postageRates: [
-        { id: 1, name: 'Standard Letter', rate: 120, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 2, name: 'Priority Mail', rate: 180, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 3, name: 'International Letter', rate: 250, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        { id: 1, name: 'Standard Letter', value: 1.20, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 2, name: 'Priority Mail', value: 1.80, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 3, name: 'International Letter', value: 2.50, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ]
 };
 
@@ -141,6 +192,15 @@ class MockStampAPI extends StampAPI {
     constructor() {
         super();
         this.data = JSON.parse(JSON.stringify(mockData)); // Deep copy
+    }
+
+    calculateEuroCents(value, currency) {
+        if (currency === 'EUR') {
+            return Math.round(value * 100);
+        } else if (currency === 'ITL') {
+            return Math.round((value / 1936.27) * 100);
+        }
+        throw new Error('Invalid currency. Must be EUR or ITL');
     }
 
     async request(endpoint, options = {}) {
@@ -155,28 +215,69 @@ class MockStampAPI extends StampAPI {
                 return this.data.collection;
             } else if (method === 'POST') {
                 const newStamp = {
-                    id: Math.max(...this.data.collection.map(s => s.id)) + 1,
+                    id: this.data.collection.length > 0 ? Math.max(...this.data.collection.map(s => s.id)) + 1 : 1,
                     ...body,
+                    euro_cents: this.calculateEuroCents(body.value, body.currency),
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
                 this.data.collection.push(newStamp);
                 return newStamp;
             }
+        } else if (endpoint.startsWith('/stamps/collection/currency/')) {
+            const currency = endpoint.split('/').pop().toUpperCase();
+            return this.data.collection.filter(s => s.currency === currency);
         } else if (endpoint.startsWith('/stamps/collection/')) {
             const id = parseInt(endpoint.split('/').pop());
             const stampIndex = this.data.collection.findIndex(s => s.id === id);
             
-            if (method === 'PUT' && stampIndex !== -1) {
+            if (method === 'GET' && stampIndex !== -1) {
+                return this.data.collection[stampIndex];
+            } else if (method === 'PUT' && stampIndex !== -1) {
                 this.data.collection[stampIndex] = {
                     ...this.data.collection[stampIndex],
                     ...body,
                     updated_at: new Date().toISOString()
                 };
                 return this.data.collection[stampIndex];
+            } else if (method === 'PATCH' && stampIndex !== -1) {
+                this.data.collection[stampIndex] = {
+                    ...this.data.collection[stampIndex],
+                    ...body,
+                    euro_cents: this.calculateEuroCents(body.value, body.currency),
+                    updated_at: new Date().toISOString()
+                };
+                return this.data.collection[stampIndex];
             } else if (method === 'DELETE' && stampIndex !== -1) {
                 return this.data.collection.splice(stampIndex, 1)[0];
             }
+        } else if (endpoint === '/stamps/stats') {
+            const totalStamps = this.data.collection.reduce((sum, s) => sum + s.n, 0);
+            const uniqueStamps = this.data.collection.length;
+            const totalValueCents = this.data.collection.reduce((sum, s) => sum + (s.euro_cents * s.n), 0);
+            const currencyBreakdown = this.data.collection.reduce((acc, s) => {
+                if (!acc[s.currency]) {
+                    acc[s.currency] = { count: 0, total_quantity: 0, total_value_cents: 0 };
+                }
+                acc[s.currency].count++;
+                acc[s.currency].total_quantity += s.n;
+                acc[s.currency].total_value_cents += s.euro_cents * s.n;
+                return acc;
+            }, {});
+            
+            return {
+                total_stamps: totalStamps,
+                unique_stamps: uniqueStamps,
+                total_value_cents: totalValueCents,
+                total_value_euros: totalValueCents / 100,
+                currency_breakdown: Object.entries(currencyBreakdown).map(([currency, data]) => ({
+                    currency,
+                    ...data
+                }))
+            };
+        } else if (endpoint === '/stamps/value') {
+            const totalValueCents = this.data.collection.reduce((sum, s) => sum + (s.euro_cents * s.n), 0);
+            return { total_value_cents: totalValueCents };
         } else if (endpoint === '/stamps/postage-rates') {
             if (method === 'GET') {
                 return this.data.postageRates;
@@ -185,13 +286,14 @@ class MockStampAPI extends StampAPI {
                 if (existingIndex !== -1) {
                     this.data.postageRates[existingIndex] = {
                         ...this.data.postageRates[existingIndex],
-                        rate: body.rate,
+                        value: body.value,
+                        max_weight: body.max_weight,
                         updated_at: new Date().toISOString()
                     };
                     return this.data.postageRates[existingIndex];
                 } else {
                     const newRate = {
-                        id: Math.max(...this.data.postageRates.map(r => r.id)) + 1,
+                        id: this.data.postageRates.length > 0 ? Math.max(...this.data.postageRates.map(r => r.id)) + 1 : 1,
                         ...body,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
