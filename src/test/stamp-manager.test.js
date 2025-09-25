@@ -32,15 +32,15 @@ describe('StampManager Integration', () => {
     // Reset all mocks
     vi.clearAllMocks()
     
-    // Mock data
+    // Mock data - updated for new currency format
     mockStamps = [
-      { id: 1, name: 'Test Stamp 1', val: 100, n: 5 },
-      { id: 2, name: 'Test Stamp 2', val: 200, n: 3 }
+      { id: 1, name: 'Test Stamp 1', value: 1.00, currency: 'EUR', euro_cents: 100, n: 5 },
+      { id: 2, name: 'Test Stamp 2', value: 2.00, currency: 'EUR', euro_cents: 200, n: 3 }
     ]
     
     mockRates = [
-      { name: 'Standard', rate: 85 },
-      { name: 'Express', rate: 150 }
+      { name: 'Standard', value: 0.85, max_weight: 20 },
+      { name: 'Express', value: 1.50, max_weight: 50 }
     ]
     
     // Mock API responses
@@ -138,6 +138,7 @@ describe('StampManager Integration', () => {
       expect(stampsContainer.innerHTML).toContain('Test Stamp 2')
       expect(stampsContainer.innerHTML).toContain('€1.00')
       expect(stampsContainer.innerHTML).toContain('€2.00')
+      expect(stampsContainer.innerHTML).toContain('Euro')
     })
 
     it('should render rates correctly', () => {
@@ -149,6 +150,8 @@ describe('StampManager Integration', () => {
       expect(ratesContainer.innerHTML).toContain('Express')
       expect(ratesContainer.innerHTML).toContain('€0.85')
       expect(ratesContainer.innerHTML).toContain('€1.50')
+      expect(ratesContainer.innerHTML).toContain('20 grams')
+      expect(ratesContainer.innerHTML).toContain('50 grams')
     })
 
     it('should show empty state when no data', async () => {
@@ -258,6 +261,7 @@ describe('StampManager Integration', () => {
       
       // Fill form
       container.querySelector('#stamp-name').value = 'New Stamp'
+      container.querySelector('#stamp-currency').value = 'EUR'
       container.querySelector('#stamp-value').value = '1.50'
       container.querySelector('#stamp-quantity').value = '10'
       
@@ -265,8 +269,8 @@ describe('StampManager Integration', () => {
       const form = container.querySelector('#add-stamp-form')
       await form.dispatchEvent(new Event('submit'))
       
-      // Check API was called
-      expect(api.addStampToCollection).toHaveBeenCalledWith('New Stamp', 150, 10)
+      // Check API was called with new signature including currency
+      expect(api.addStampToCollection).toHaveBeenCalledWith('New Stamp', 1.5, 'EUR', 10)
     })
 
     it('should add a new rate', async () => {
@@ -279,13 +283,14 @@ describe('StampManager Integration', () => {
       // Fill form
       container.querySelector('#rate-name').value = 'Priority'
       container.querySelector('#rate-value').value = '2.00'
+      container.querySelector('#rate-weight').value = '20'
       
       // Submit form
       const form = container.querySelector('#add-rate-form')
       await form.dispatchEvent(new Event('submit'))
       
-      // Check API was called
-      expect(api.addPostageRate).toHaveBeenCalledWith('Priority', 200)
+      // Check API was called with new signature including max weight
+      expect(api.addPostageRate).toHaveBeenCalledWith('Priority', 2, 20)
     })
 
     it('should delete stamps when confirmed', async () => {
