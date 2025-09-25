@@ -152,14 +152,20 @@ class StampManager {
                         <div class="card-header">
                             <h3>${stamp.name}</h3>
                             <div class="card-actions">
-                                <button class="btn btn-sm" onclick="stampManager.editStamp(${stamp.id})">Edit</button>
                                 <button class="btn btn-sm btn-danger" onclick="stampManager.deleteStamp(${stamp.id})">Delete</button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <p><strong>Value:</strong> €${(stamp.val / 100).toFixed(2)}</p>
+                            <p><strong>Value:</strong> ${stamp.currency === 'ITL' ? 
+                                'L. ' + (stamp.value ? stamp.value.toFixed(0) : '0') + ' (€' + (stamp.euro_cents ? (stamp.euro_cents / 100).toFixed(2) : '0.00') + ')' : 
+                                stamp.postage_rate_name ? 
+                                    stamp.postage_rate_name + ' (€' + (stamp.value ? stamp.value.toFixed(2) : '0.00') + ')' :
+                                    '€' + (stamp.value ? stamp.value.toFixed(2) : '0.00')}</p>
+                            <p><strong>Currency:</strong> ${stamp.currency === 'ITL' ? 'Italian Lira' : 'Euro'}</p>
                             <p><strong>Quantity:</strong> ${stamp.n}</p>
-                            <p><strong>Total Value:</strong> €${((stamp.val * stamp.n) / 100).toFixed(2)}</p>
+                            <p><strong>Total Value (EUR):</strong> €${stamp.currency === 'ITL' ? 
+                                ((stamp.value * stamp.n) / 1936.27).toFixed(2) : 
+                                stamp.euro_cents ? ((stamp.euro_cents * stamp.n) / 100).toFixed(2) : '0.00'}</p>
                         </div>
                     </div>
                 `).join('')}
@@ -182,12 +188,12 @@ class StampManager {
                         <div class="card-header">
                             <h3>${rate.name}</h3>
                             <div class="card-actions">
-                                <button class="btn btn-sm" onclick="stampManager.editRate('${rate.name}')">Edit</button>
                                 <button class="btn btn-sm btn-danger" onclick="stampManager.deleteRate('${rate.name}')">Delete</button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <p><strong>Rate:</strong> €${(rate.rate / 100).toFixed(2)}</p>
+                            <p><strong>Rate:</strong> €${rate.value ? rate.value.toFixed(2) : '0.00'}</p>
+                            <p><strong>Max Weight:</strong> ${rate.max_weight || 'N/A'} grams</p>
                         </div>
                     </div>
                 `).join('')}
@@ -227,8 +233,16 @@ class StampManager {
                     <input type="text" id="stamp-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="stamp-value">Value (€):</label>
+                    <label for="stamp-currency">Currency:</label>
+                    <select id="stamp-currency" required>
+                        <option value="EUR">Euro (€)</option>
+                        <option value="ITL">Italian Lira (L.)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stamp-value">Value:</label>
                     <input type="number" id="stamp-value" step="0.01" min="0.01" required>
+                    <small id="currency-hint">Enter value in selected currency</small>
                 </div>
                 <div class="form-group">
                     <label for="stamp-quantity">Quantity:</label>
@@ -246,6 +260,19 @@ class StampManager {
             await this.handleAddStamp(e);
         });
 
+        // Update currency hint when currency changes
+        this.container.querySelector('#stamp-currency').addEventListener('change', (e) => {
+            const hint = this.container.querySelector('#currency-hint');
+            const valueLabel = this.container.querySelector('label[for="stamp-value"]');
+            if (e.target.value === 'ITL') {
+                hint.textContent = 'Enter value in Italian Lire (e.g., 500 for L. 500)';
+                valueLabel.textContent = 'Value (L.):';
+            } else {
+                hint.textContent = 'Enter value in Euros (e.g., 2.50 for €2.50)';
+                valueLabel.textContent = 'Value (€):';
+            }
+        });
+
         this.showModal();
     }
 
@@ -261,6 +288,10 @@ class StampManager {
                 <div class="form-group">
                     <label for="rate-value">Rate (€):</label>
                     <input type="number" id="rate-value" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="rate-weight">Max Weight (grams):</label>
+                    <input type="number" id="rate-weight" min="1" value="20" required>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Rate</button>
@@ -281,10 +312,11 @@ class StampManager {
         try {
             const formData = new FormData(e.target);
             const name = this.container.querySelector('#stamp-name').value;
-            const value = Math.round(parseFloat(this.container.querySelector('#stamp-value').value) * 100);
+            const currency = this.container.querySelector('#stamp-currency').value;
+            const value = parseFloat(this.container.querySelector('#stamp-value').value);
             const quantity = parseInt(this.container.querySelector('#stamp-quantity').value);
 
-            await api.addStampToCollection(name, value, quantity);
+            await api.addStampToCollection(name, value, currency, quantity);
             await this.loadData();
             this.hideModal();
         } catch (error) {
@@ -296,9 +328,10 @@ class StampManager {
     async handleAddRate(e) {
         try {
             const name = this.container.querySelector('#rate-name').value;
-            const rate = Math.round(parseFloat(this.container.querySelector('#rate-value').value) * 100);
+            const value = parseFloat(this.container.querySelector('#rate-value').value);
+            const maxWeight = parseInt(this.container.querySelector('#rate-weight').value) || 20;
 
-            await api.addPostageRate(name, rate);
+            await api.addPostageRate(name, value, maxWeight);
             await this.loadData();
             this.hideModal();
         } catch (error) {

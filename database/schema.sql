@@ -89,7 +89,7 @@ BEGIN
     UPDATE stamps 
     SET euro_cents = CASE 
         WHEN NEW.currency = 'EUR' THEN CAST(NEW.value * 100 AS INTEGER)
-        WHEN NEW.currency = 'ITL' THEN CAST(NEW.value / 1936.27 * 100 AS INTEGER)
+        WHEN NEW.currency = 'ITL' THEN ROUND(NEW.value / 1936.27 * 100)
         ELSE 0
     END
     WHERE id = NEW.id;
@@ -102,7 +102,7 @@ BEGIN
     UPDATE stamps 
     SET euro_cents = CASE 
         WHEN NEW.currency = 'EUR' THEN CAST(NEW.value * 100 AS INTEGER)
-        WHEN NEW.currency = 'ITL' THEN CAST(NEW.value / 1936.27 * 100 AS INTEGER)
+        WHEN NEW.currency = 'ITL' THEN ROUND(NEW.value / 1936.27 * 100)
         ELSE NEW.euro_cents
     END
     WHERE id = NEW.id;
