@@ -24,9 +24,39 @@ class StampAPI {
         try {
             const response = await fetch(url, config);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Try to get error details from response body
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const responseText = await response.text();
+                    console.log('Error response body:', responseText);
+                    
+                    if (responseText) {
+                        const errorData = JSON.parse(responseText);
+                        errorMessage = errorData.error || errorMessage;
+                        if (errorData.details) {
+                            const details = errorData.details.map(d => d.msg).join(', ');
+                            errorMessage = `${errorMessage}: ${details}`;
+                        }
+                    }
+                } catch (parseError) {
+                    console.log('Could not parse error response:', parseError);
+                }
+                throw new Error(errorMessage);
             }
-            return await response.json();
+            
+            // Handle empty responses (like 204 No Content)
+            if (response.status === 204 || response.headers.get('content-length') === '0') {
+                return null;
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            }
+            
+            // Fallback for non-JSON responses
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
@@ -39,9 +69,13 @@ class StampAPI {
     }
 
     async addStampToCollection(name, value, currency, n = 1, postage_rate_id = null) {
+        const body = { name, value, currency, n };
+        if (postage_rate_id !== null && postage_rate_id !== undefined) {
+            body.postage_rate_id = postage_rate_id;
+        }
         return this.request('/stamps/collection', {
             method: 'POST',
-            body: JSON.stringify({ name, value, currency, n, postage_rate_id })
+            body: JSON.stringify(body)
         });
     }
 

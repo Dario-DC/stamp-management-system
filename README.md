@@ -47,10 +47,102 @@ A modern web application for managing stamp collections and postage rates, built
    ```
 
 3. **Environment setup** (optional)
+   Create a `.env` file in the root directory:
    ```bash
+   # Optional: Custom database path
+   STAMP_DB_PATH=./database/stamps.db
+   
+   # Server configuration
+   PORT=3001
+   NODE_ENV=development
+   ```
+
+## 🗄️ Database Setup
+
+### Initial Database State
+
+When you first run the application, the database will be automatically initialized with:
+
+- **Postage Rates Table**: Pre-populated with current postal rates (A, B, A1, B1, etc.)
+- **Stamps Table**: Empty - ready for you to add your own stamp collection
+
+This ensures a clean starting point where:
+- All postage rates are available immediately for reference
+- Your stamp collection starts empty and grows as you add items
+- No sample/dummy data clutters your actual collection
+
+### Database Files
+
+- **Production**: `./database/stamps.db`
+- **Testing**: Uses separate test databases to avoid conflicts
+  - Frontend tests: `./database/frontend_test_stamps.db`
+  - Backend tests: `./database/backend_test_stamps.db`
+
+### Database Schema
+
+The system uses two main tables:
+
+**postage_rates**: Current postal rates
+- `id`, `name`, `value` (EUR), `max_weight` (grams)
+- Pre-populated with standard rates
+
+**stamps**: Your stamp collection
+- `id`, `name`, `value`, `currency` (EUR/ITL), `euro_cents`, `n` (quantity)
+- Links to postage_rates via `postage_rate_id`
+- Automatic currency conversion via database triggers
+
+### Environment Variables
+
+Use `STAMP_DB_PATH` environment variable to specify custom database location:
+
+```bash
+# For testing
+export STAMP_DB_PATH="./test_stamps.db"
+
+# For custom location
+export STAMP_DB_PATH="/path/to/custom/stamps.db"
    cp .env.example .env
    # Edit .env with your preferences
    ```
+
+## Database Initialization and Testing
+
+### Database Structure
+
+The stamp management system uses SQLite with two main tables:
+
+1. **`postage_rates`** - Contains postal rates (initialized with data from `init_data.sql`)
+2. **`stamps`** - Contains user's stamp collection (starts empty)
+
+### Initial Setup
+
+When you first run the application:
+- The database is automatically created
+- The `postage_rates` table is populated with initial postal rates
+- The `stamps` table remains empty for users to populate
+
+### Testing Environment
+
+The project uses separate database files for testing to avoid conflicts:
+
+- **Main database**: `database/stamps.db`  
+- **Frontend tests**: `database/test_stamps.db`
+- **Backend tests**: `database/backend_test_stamps.db`
+
+The environment variable `STAMP_DB_PATH` controls which database file is used. Tests automatically set this to use their respective test databases.
+
+### Database Files
+
+- `schema.sql` - Database schema with tables, indexes, and triggers
+- `init_data.sql` - Initial postage rates data (loaded once)
+- `sample_data.sql` - Sample data for development/demo purposes
+- `test_init.sql` - Clean test initialization script
+
+### Currency Conversion
+
+The system supports both EUR and ITL currencies with automatic conversion:
+- 1 EUR = 1936.27 ITL (historical conversion rate)
+- Values are stored in both original currency and euro cents for calculations
 
 ## 🎯 Usage
 

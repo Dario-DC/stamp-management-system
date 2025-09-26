@@ -4,19 +4,24 @@ This directory contains the database setup and management files for the Stamp Ma
 
 ## Files
 
-- `schema.sql` - Database schema with table definitions
-- `sample_data.sql` - Sample data for testing
+- `schema.sql` - Database schema with table definitions, triggers, and indexes
+- `init_data.sql` - Initial postage rates data (loaded once on first run)
+- `sample_data.sql` - Sample data for development/demo purposes  
+- `test_init.sql` - Clean test initialization script
 - `database.py` - Python database interface and utilities
 - `stamps.db` - SQLite database file (created automatically)
 
 ## Database Schema
 
-### stamp_collection table
+### stamps table
 Stores information about stamps in your collection:
 - `id` - Primary key (auto-increment)
 - `name` - Name of the stamp (TEXT)
-- `val` - Stamp value in euro cents (INTEGER) - e.g., 300 = €3.00
+- `value` - Original stamp value (DECIMAL) 
+- `currency` - Currency type (TEXT): 'EUR' or 'ITL'
+- `euro_cents` - Current value in euro cents (INTEGER) - calculated automatically
 - `n` - Number of stamps (INTEGER)
+- `postage_rate_id` - Reference to postage_rates table (INTEGER, nullable)
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
 
@@ -24,7 +29,8 @@ Stores information about stamps in your collection:
 Stores current postage rates for stamps:
 - `id` - Primary key (auto-increment)
 - `name` - Name of the stamp type (TEXT, UNIQUE)
-- `rate` - Postage rate in euro cents (INTEGER) - e.g., 300 = €3.00
+- `value` - Postage rate value in euros (DECIMAL) - e.g., 3.00 = €3.00
+- `max_weight` - Maximum weight in grams (INTEGER)
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
 

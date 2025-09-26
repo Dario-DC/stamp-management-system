@@ -310,12 +310,24 @@ class StampManager {
 
     async handleAddStamp(e) {
         try {
-            const formData = new FormData(e.target);
-            const name = this.container.querySelector('#stamp-name').value;
+            const name = this.container.querySelector('#stamp-name').value.trim();
             const currency = this.container.querySelector('#stamp-currency').value;
             const value = parseFloat(this.container.querySelector('#stamp-value').value);
             const quantity = parseInt(this.container.querySelector('#stamp-quantity').value);
 
+            // Basic client-side validation
+            if (!name) {
+                throw new Error('Stamp name is required');
+            }
+            if (isNaN(value) || value <= 0) {
+                throw new Error('Valid stamp value is required');
+            }
+            if (isNaN(quantity) || quantity <= 0) {
+                throw new Error('Valid quantity is required');
+            }
+
+            console.log('Adding stamp with data:', { name, value, currency, quantity });
+            
             await api.addStampToCollection(name, value, currency, quantity);
             await this.loadData();
             this.hideModal();

@@ -66,13 +66,31 @@ describe('Stamp Management API Integration Tests', () => {
         });
     });
 
-    describe('Stamp Collection API', () => {
-        it('should get all stamps', async () => {
-            const { response, data } = await apiRequest('/api/stamps/collection');
+    describe('Initial Database State', () => {
+        it('should have postage rates initialized on first run', async () => {
+            const { response, data } = await apiRequest('/api/stamps/postage-rates');
 
             expect(response.status).toBe(200);
             expect(Array.isArray(data)).toBe(true);
             expect(data.length).toBeGreaterThan(0);
+            
+            // Check for some expected initial postage rates
+            const rateNames = data.map(rate => rate.name);
+            expect(rateNames).toContain('A');
+            expect(rateNames).toContain('B');
+            expect(rateNames).toContain('A1');
+            expect(rateNames).toContain('B1');
+        });
+    });
+
+    describe('Stamp Collection API', () => {
+        it('should get all stamps (initially empty)', async () => {
+            const { response, data } = await apiRequest('/api/stamps/collection');
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(data)).toBe(true);
+            // On first run, stamps table should be empty
+            expect(data.length).toBe(0);
         });
 
         it('should add a new stamp', async () => {

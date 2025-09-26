@@ -4,8 +4,12 @@ from pathlib import Path
 
 
 class Database:
-    def __init__(self, db_path='database/stamps.db'):
+    def __init__(self, db_path=None):
         """Initialize the database connection and create tables if they don't exist."""
+        # Use environment variable for test database, otherwise use default
+        if db_path is None:
+            db_path = os.getenv('STAMP_DB_PATH', 'database/stamps.db')
+
         self.db_path = db_path
 
         # Create database directory if it doesn't exist
@@ -64,13 +68,21 @@ class Database:
                 conn.commit()
 
     # Stamp Collection Methods
-    def add_stamp_to_collection(self, name, val, n=1):
+    def add_stamp_to_collection(self, name, value, currency, n=1, postage_rate_id=None):
         """Add a stamp to the collection."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            # Calculate euro_cents based on currency and value
+            if currency == 'EUR':
+                euro_cents = int(value * 100)
+            elif currency == 'ITL':
+                euro_cents = int((value / 1936.27) * 100)
+            else:
+                raise ValueError("Currency must be EUR or ITL")
+
             cursor.execute(
-                "INSERT INTO stamp_collection (name, val, n) VALUES (?, ?, ?)",
-                (name, val, n),
+                "INSERT INTO stamps (name, value, currency, euro_cents, n, postage_rate_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (name, value, currency, euro_cents, n, postage_rate_id),
             )
             conn.commit()
             return cursor.lastrowid
@@ -79,7 +91,14 @@ class Database:
         """Get all stamps from the collection."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM stamp_collection ORDER BY name")
+            cursor.execute(
+                """
+                SELECT s.*, pr.name as postage_rate_name
+                FROM stamps s 
+                LEFT JOIN postage_rates pr ON s.postage_rate_id = pr.id 
+                ORDER BY s.name
+            """
+            )
             return cursor.fetchall()
 
     def update_stamp_quantity(self, stamp_id, new_quantity):
@@ -87,7 +106,7 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE stamp_collection SET n = ? WHERE id = ?",
+                "UPDATE stamps SET n = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (new_quantity, stamp_id),
             )
             conn.commit()
@@ -97,7 +116,7 @@ class Database:
         """Delete a stamp from the collection."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM stamp_collection WHERE id = ?", (stamp_id,))
+            cursor.execute("DELETE FROM stamps WHERE id = ?", (stamp_id,))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -105,18 +124,18 @@ class Database:
         """Clear all stamps from the collection (for fresh start)."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM stamp_collection")
+            cursor.execute("DELETE FROM stamps")
             conn.commit()
             return cursor.rowcount
 
     # Postage Rates Methods
-    def add_postage_rate(self, name, rate):
+    def add_postage_rate(self, name, value, max_weight):
         """Add or update a postage rate."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR REPLACE INTO postage_rates (name, rate) VALUES (?, ?)",
-                (name, rate),
+                "INSERT OR REPLACE INTO postage_rates (name, value, max_weight) VALUES (?, ?, ?)",
+                (name, value, max_weight),
             )
             conn.commit()
             return cursor.lastrowid
@@ -135,12 +154,13 @@ class Database:
             cursor.execute("SELECT * FROM postage_rates WHERE name = ?", (name,))
             return cursor.fetchone()
 
-    def update_rate(self, name, new_rate):
+    def update_rate(self, name, new_value, new_max_weight):
         """Update a postage rate."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE postage_rates SET rate = ? WHERE name = ?", (new_rate, name)
+                "UPDATE postage_rates SET value = ?, max_weight = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?",
+                (new_value, new_max_weight, name),
             )
             conn.commit()
             return cursor.rowcount > 0
@@ -167,10 +187,10 @@ if __name__ == "__main__":
     stamps = db.get_stamp_collection()
     if stamps:
         for stamp in stamps:
-            print(f"  {stamp[1]}: €{stamp[2]/100:.2f} ({stamp[3]} stamps)")
+            print(f"  {stamp[1]}: {stamp[2]} {stamp[3]} ({stamp[5]} stamps)")
     else:
         print("  No stamps in collection yet.")
 
     print("\nPostage Rates:")
     for rate in db.get_postage_rates():
-        print(f"  {rate[1]}: €{rate[2]/100:.2f}")
+        print(f"  {rate[1]}: €{rate[2]:.2f} (max {rate[3]}g)")
