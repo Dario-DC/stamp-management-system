@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node', // Use Node.js environment for backend tests
-    // Don't include the jsdom setup file for backend tests
-    include: ['src/test/backend.test.js']
+    setupFiles: ['./src/test/backend-setup.js'], // Use backend-specific setup
+    include: ['src/test/backend.test.js', 'src/test/database-init.test.js']
   }
 })

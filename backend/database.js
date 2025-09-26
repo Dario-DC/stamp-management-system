@@ -12,7 +12,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 class StampDatabase {
-    constructor(dbPath = './database/stamps.db') {
+    constructor(dbPath = null) {
+        // Use environment variable for test database, otherwise use default
+        if (dbPath === null) {
+            dbPath = process.env.STAMP_DB_PATH || './database/stamps.db';
+        }
+        
         this.db = new Database(dbPath);
         this.db.pragma('journal_mode = WAL');
         this.initDatabase();
@@ -25,11 +30,17 @@ class StampDatabase {
         const schema = readFileSync(schemaPath, 'utf8');
         this.db.exec(schema);
         
-        // Load sample data if database is empty
-        const stampCount = this.db.prepare('SELECT COUNT(*) as count FROM stamps').get().count;
-        if (stampCount === 0) {
-            this.loadSampleData();
+        // Load initial data (postage rates only) if database is empty
+        const postageRatesCount = this.db.prepare('SELECT COUNT(*) as count FROM postage_rates').get().count;
+        if (postageRatesCount === 0) {
+            this.loadInitialData();
         }
+    }
+
+    loadInitialData() {
+        const initDataPath = join(__dirname, '../database/init_data.sql');
+        const initData = readFileSync(initDataPath, 'utf8');
+        this.db.exec(initData);
     }
 
     loadSampleData() {
