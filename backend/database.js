@@ -65,6 +65,12 @@ class StampDatabase {
                 LEFT JOIN postage_rates pr ON s.postage_rate_id = pr.id 
                 WHERE s.id = ?
             `),
+            getStampByNameAndCurrency: this.db.prepare(`
+                SELECT s.*, pr.name as postage_rate_name
+                FROM stamps s 
+                LEFT JOIN postage_rates pr ON s.postage_rate_id = pr.id 
+                WHERE s.name = ? AND s.currency = ?
+            `),
             addStamp: this.db.prepare(`
                 INSERT INTO stamps (name, value, currency, n, postage_rate_id) 
                 VALUES (?, ?, ?, ?, ?)
@@ -113,9 +119,28 @@ class StampDatabase {
         return this.statements.getStampById.get(id);
     }
 
+    getStampByNameAndCurrency(name, currency) {
+        return this.statements.getStampByNameAndCurrency.get(name, currency);
+    }
+
     addStampToCollection(name, value, currency, n = 1, postageRateId = null) {
-        const result = this.statements.addStamp.run(name, value, currency, n, postageRateId);
-        return { id: result.lastInsertRowid, name, value, currency, n, postage_rate_id: postageRateId };
+        // Check if a stamp with the same name and currency already exists
+        const existingStamp = this.getStampByNameAndCurrency(name, currency);
+        
+        if (existingStamp) {
+            // Update the quantity of the existing stamp
+            const newQuantity = existingStamp.n + n;
+            const updated = this.updateStampQuantity(existingStamp.id, newQuantity);
+            if (updated) {
+                return this.getStampById(existingStamp.id);
+            } else {
+                throw new Error('Failed to update existing stamp quantity');
+            }
+        } else {
+            // Create a new stamp
+            const result = this.statements.addStamp.run(name, value, currency, n, postageRateId);
+            return { id: result.lastInsertRowid, name, value, currency, n, postage_rate_id: postageRateId };
+        }
     }
 
     updateStampQuantity(id, quantity) {

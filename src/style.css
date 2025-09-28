@@ -479,8 +479,32 @@ button:focus-visible {
   display: none;
 }
 
-/* Dark mode adjustments for radio buttons */
+/* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
+  /* Data cards dark mode */
+  .data-card {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .data-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-header h3 {
+    color: #f9fafb !important;
+  }
+
+  .card-body {
+    color: #f9fafb;
+  }
+
+  .card-body p {
+    color: #f9fafb;
+  }
+
+  /* Radio buttons dark mode */
   .radio-option {
     background: #374151;
     border-color: #4b5563;

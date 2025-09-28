@@ -63,8 +63,8 @@ describe('Database Initialization Tests', () => {
         const rateNames = rates.map(rate => rate.name);
         expect(rateNames).toContain('A');
         expect(rateNames).toContain('B');
-        expect(rateNames).toContain('A1');
-        expect(rateNames).toContain('B1');
+        expect(rateNames).toContain('A Zona 1');
+        expect(rateNames).toContain('B Zona 1');
         
         // Check that stamps table is empty
         const { response: stampsResponse, data: stamps } = await apiRequest('/api/stamps/collection');
@@ -128,7 +128,7 @@ describe('Database Initialization Tests', () => {
     it('should calculate euro_cents correctly for different currencies', async () => {
         // Add EUR stamp
         const eurStamp = {
-            name: 'EUR Test Stamp',
+            name: '€1.50',
             value: 1.50,
             currency: 'EUR',
             n: 1
@@ -143,7 +143,7 @@ describe('Database Initialization Tests', () => {
 
         // Add ITL stamp
         const itlStamp = {
-            name: 'ITL Test Stamp',
+            name: '₤1936',
             value: 1936.27, // Should convert to 1 EUR
             currency: 'ITL',
             n: 1

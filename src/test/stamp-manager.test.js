@@ -34,13 +34,13 @@ describe('StampManager Integration', () => {
     
     // Mock data - updated for new currency format
     mockStamps = [
-      { id: 1, name: 'Test Stamp 1', value: 1.00, currency: 'EUR', euro_cents: 100, n: 5 },
-      { id: 2, name: 'Test Stamp 2', value: 2.00, currency: 'EUR', euro_cents: 200, n: 3 }
+      { id: 1, name: '€1.00', value: 1.00, currency: 'EUR', euro_cents: 100, n: 5 },
+      { id: 2, name: 'A', value: 1.10, currency: 'EUR', euro_cents: 110, n: 3, postage_rate_id: 1 }
     ]
     
     mockRates = [
-      { name: 'Standard', value: 0.85, max_weight: 20 },
-      { name: 'Express', value: 1.50, max_weight: 50 }
+      { id: 1, name: 'A', value: 1.10, max_weight: 20 },
+      { id: 2, name: 'B Zona 1', value: 1.40, max_weight: 20 }
     ]
     
     // Mock API responses
@@ -134,11 +134,8 @@ describe('StampManager Integration', () => {
       const stampsContainer = container.querySelector('#stamps-container')
       
       // Should show stamps
-      expect(stampsContainer.innerHTML).toContain('Test Stamp 1')
-      expect(stampsContainer.innerHTML).toContain('Test Stamp 2')
       expect(stampsContainer.innerHTML).toContain('€1.00')
-      expect(stampsContainer.innerHTML).toContain('€2.00')
-      expect(stampsContainer.innerHTML).toContain('Euro')
+      expect(stampsContainer.innerHTML).toContain('A')
     })
 
     it('should render rates correctly', () => {
@@ -146,12 +143,11 @@ describe('StampManager Integration', () => {
       const ratesContainer = container.querySelector('#rates-container')
       
       // Should show rates
-      expect(ratesContainer.innerHTML).toContain('Standard')
-      expect(ratesContainer.innerHTML).toContain('Express')
-      expect(ratesContainer.innerHTML).toContain('€0.85')
-      expect(ratesContainer.innerHTML).toContain('€1.50')
+      expect(ratesContainer.innerHTML).toContain('A')
+      expect(ratesContainer.innerHTML).toContain('B Zona 1')
+      expect(ratesContainer.innerHTML).toContain('€1.10')
+      expect(ratesContainer.innerHTML).toContain('€1.40')
       expect(ratesContainer.innerHTML).toContain('20 grams')
-      expect(ratesContainer.innerHTML).toContain('50 grams')
     })
 
     it('should show empty state when no data', async () => {
@@ -259,9 +255,12 @@ describe('StampManager Integration', () => {
       // Open modal
       addStampBtn.click()
       
-      // Fill form
-      container.querySelector('#stamp-name').value = 'New Stamp'
-      container.querySelector('#stamp-currency').value = 'EUR'
+      // Fill form - select EUR mode (should be selected by default)
+      const eurRadio = container.querySelector('input[name="currency-type"][value="EUR"]')
+      eurRadio.checked = true
+      eurRadio.dispatchEvent(new Event('change'))
+      
+      // Fill value and quantity
       container.querySelector('#stamp-value').value = '1.50'
       container.querySelector('#stamp-quantity').value = '10'
       
@@ -269,8 +268,8 @@ describe('StampManager Integration', () => {
       const form = container.querySelector('#add-stamp-form')
       await form.dispatchEvent(new Event('submit'))
       
-      // Check API was called with new signature including currency
-      expect(api.addStampToCollection).toHaveBeenCalledWith('New Stamp', 1.5, 'EUR', 10)
+      // Check API was called with auto-generated name for EUR
+      expect(api.addStampToCollection).toHaveBeenCalledWith('€1.50', 1.5, 'EUR', 10, null)
     })
 
     it('should add a new rate', async () => {
@@ -294,8 +293,8 @@ describe('StampManager Integration', () => {
     })
 
     it('should delete stamps when confirmed', async () => {
-      // Simulate delete stamp call
-      await manager.deleteStamp(1)
+      // Simulate delete modal call for single stamp (quantity = 1)
+      await manager.showDeleteModal(1, '€1.00', 1)
       
       expect(global.confirm).toHaveBeenCalled()
       expect(api.deleteStampFromCollection).toHaveBeenCalledWith(1)
@@ -303,16 +302,16 @@ describe('StampManager Integration', () => {
 
     it('should delete rates when confirmed', async () => {
       // Simulate delete rate call
-      await manager.deleteRate('Standard')
+      await manager.deleteRate('A')
       
       expect(global.confirm).toHaveBeenCalled()
-      expect(api.deleteRate).toHaveBeenCalledWith('Standard')
+      expect(api.deleteRate).toHaveBeenCalledWith('A')
     })
 
     it('should not delete when user cancels', async () => {
       global.confirm.mockReturnValue(false)
       
-      await manager.deleteStamp(1)
+      await manager.showDeleteModal(1, '€1.00', 1)
       
       expect(global.confirm).toHaveBeenCalled()
       expect(api.deleteStampFromCollection).not.toHaveBeenCalled()
@@ -333,7 +332,7 @@ describe('StampManager Integration', () => {
       
       addStampBtn.click()
       
-      container.querySelector('#stamp-name').value = 'Test'
+      // Fill form with EUR mode (default)
       container.querySelector('#stamp-value').value = '1.00'
       container.querySelector('#stamp-quantity').value = '1'
       
@@ -346,7 +345,7 @@ describe('StampManager Integration', () => {
     it('should handle delete errors', async () => {
       api.deleteStampFromCollection.mockRejectedValue(new Error('Delete failed'))
       
-      await manager.deleteStamp(1)
+      await manager.showDeleteModal(1, '€1.00', 1)
       
       expect(global.alert).toHaveBeenCalledWith('Failed to delete stamp: Delete failed')
     })

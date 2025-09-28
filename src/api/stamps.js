@@ -209,15 +209,19 @@ async function checkBackendAvailability() {
 // For development/demo purposes - Mock data when backend is not available
 const mockData = {
     collection: [
-        { id: 1, name: 'Standard Letter Stamp', value: 1.20, currency: 'EUR', euro_cents: 120, n: 50, postage_rate_id: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 2, name: 'Priority Mail Stamp', value: 1.80, currency: 'EUR', euro_cents: 180, n: 25, postage_rate_id: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 3, name: 'International Stamp', value: 2.50, currency: 'EUR', euro_cents: 250, n: 15, postage_rate_id: 3, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 4, name: 'Vintage Italian Stamp', value: 500, currency: 'ITL', euro_cents: 26, n: 10, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        { id: 1, name: '€1.20', value: 1.20, currency: 'EUR', euro_cents: 120, n: 50, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 2, name: 'A', value: 1.10, currency: 'EUR', euro_cents: 110, n: 25, postage_rate_id: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 3, name: 'B Zona 1', value: 1.40, currency: 'EUR', euro_cents: 140, n: 15, postage_rate_id: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 4, name: '₤500', value: 500, currency: 'ITL', euro_cents: 26, n: 10, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 5, name: '€0.85', value: 0.85, currency: 'EUR', euro_cents: 85, n: 30, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 6, name: '₤1000', value: 1000, currency: 'ITL', euro_cents: 52, n: 5, postage_rate_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ],
     postageRates: [
-        { id: 1, name: 'Standard Letter', value: 1.20, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 2, name: 'Priority Mail', value: 1.80, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: 3, name: 'International Letter', value: 2.50, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        { id: 1, name: 'A', value: 1.10, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 2, name: 'B Zona 1', value: 1.40, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 3, name: 'B Zona 2', value: 1.70, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 4, name: 'A Zona 1', value: 1.25, max_weight: 20, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 5, name: 'B 50g', value: 2.20, max_weight: 50, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     ]
 };
 
