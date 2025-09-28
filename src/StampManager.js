@@ -677,31 +677,72 @@ class StampManager {
         const modalBody = this.container.querySelector('#modal-body');
         modalBody.innerHTML = `
             <h3>Stamp Combinations for ${rateName} (€${rateValue.toFixed(2)})</h3>
+            
+            <div class="form-group">
+                <label for="max-stamps">Maximum number of stamps (optional):</label>
+                <input type="number" id="max-stamps" min="1" max="100" placeholder="No limit" 
+                       title="Leave empty for no limit, or enter maximum number of stamps allowed in combination">
+                <small>Limit the number of stamps in each combination (leave empty for no limit)</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="overpay-margin">Maximum overpay (€):</label>
+                <input type="number" id="overpay-margin" step="0.01" min="0" max="1" value="0.10" 
+                       title="Maximum acceptable amount to overpay beyond the required postage">
+                <small>Maximum extra amount you're willing to pay (e.g., 0.10 for 10 cents overpay)</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" id="find-combinations-btn" class="btn btn-primary">Find Combinations</button>
+                <button type="button" class="btn" onclick="stampManager.hideModal()">Cancel</button>
+            </div>
+            
             <div id="combinations-content">
-                <div class="loading">Finding stamp combinations...</div>
+                <!-- Results will appear here after clicking "Find Combinations" -->
             </div>
         `;
 
+        // Add event listener for the find combinations button
+        this.container.querySelector('#find-combinations-btn').addEventListener('click', () => {
+            const maxStampsInput = this.container.querySelector('#max-stamps');
+            const overpayMarginInput = this.container.querySelector('#overpay-margin');
+            
+            const maxStamps = maxStampsInput.value ? parseInt(maxStampsInput.value) : null;
+            const overpayMargin = overpayMarginInput.value ? parseFloat(overpayMarginInput.value) : 0.10;
+            
+            // Show loading state
+            const combinationsContent = this.container.querySelector('#combinations-content');
+            combinationsContent.innerHTML = '<div class="loading">Finding stamp combinations...</div>';
+            
+            // Find combinations with the specified limits
+            this.findAndDisplayCombinations(rateValue, maxStamps, overpayMargin);
+        });
+
         this.showModal();
-        this.findAndDisplayCombinations(rateValue);
     }
 
-    async findAndDisplayCombinations(targetValue) {
+    async findAndDisplayCombinations(targetValue, maxStamps = null, overpayMargin = 0.10) {
         try {
-            const combinations = findStampCombinations(this.stamps, targetValue);
+            const combinations = findStampCombinations(this.stamps, targetValue, maxStamps, overpayMargin);
             const combinationsContent = this.container.querySelector('#combinations-content');
             
             if (combinations.length === 0) {
+                const maxStampsText = maxStamps ? ` using at most ${maxStamps} stamp${maxStamps === 1 ? '' : 's'}` : '';
+                const overpayText = overpayMargin > 0 ? ` with max €${overpayMargin.toFixed(2)} overpay` : '';
                 combinationsContent.innerHTML = `
                     <div class="empty-state">
-                        No stamp combinations found that add up to €${targetValue.toFixed(2)}
+                        No stamp combinations found that add up to €${targetValue.toFixed(2)}${maxStampsText}${overpayText}
                     </div>
                 `;
                 return;
             }
 
+            const maxStampsText = maxStamps ? ` (max ${maxStamps} stamp${maxStamps === 1 ? '' : 's'})` : '';
+            const overpayText = overpayMargin > 0 ? ` (max overpay €${overpayMargin.toFixed(2)})` : '';
             combinationsContent.innerHTML = `
-                <p>Found ${combinations.length} combination${combinations.length === 1 ? '' : 's'}:</p>
+                <hr>
+                <h4>Results${maxStampsText}${overpayText}</h4>
+                <p>Found ${combinations.length} combination${combinations.length === 1 ? '' : 's'} for €${targetValue.toFixed(2)}:</p>
                 <div class="combinations-list">
                     ${combinations.map((combination, index) => `
                         <div class="combination-item">
@@ -715,7 +756,7 @@ class StampManager {
                     `).join('')}
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn" onclick="stampManager.hideModal()">Cancel</button>
+                    <button type="button" class="btn" onclick="stampManager.hideModal()">Close</button>
                 </div>
             `;
 
