@@ -229,8 +229,8 @@ class StampManager {
             <h3>Add New Stamp</h3>
             <form id="add-stamp-form">
                 <div class="form-group">
-                    <label for="stamp-name">Name:</label>
-                    <input type="text" id="stamp-name" required>
+                    <label for="stamp-name">Stamp Name:</label>
+                    <input type="text" id="stamp-name" placeholder="Enter stamp name (e.g., 'Christmas 2024')" required>
                 </div>
                 <div class="form-group">
                     <label for="stamp-currency">Currency:</label>
@@ -240,13 +240,14 @@ class StampManager {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="stamp-value">Value:</label>
-                    <input type="number" id="stamp-value" step="0.01" min="0.01" required>
+                    <label for="stamp-value">Value (€):</label>
+                    <input type="number" id="stamp-value" step="0.01" min="0.01" placeholder="0.00" required>
                     <small id="currency-hint">Enter value in selected currency</small>
                 </div>
                 <div class="form-group">
                     <label for="stamp-quantity">Quantity:</label>
-                    <input type="number" id="stamp-quantity" min="1" value="1" required>
+                    <input type="number" id="stamp-quantity" min="1" value="1" placeholder="1" required>
+                    <small>Number of stamps to add to collection</small>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Stamp</button>
@@ -282,16 +283,18 @@ class StampManager {
             <h3>Add New Postage Rate</h3>
             <form id="add-rate-form">
                 <div class="form-group">
-                    <label for="rate-name">Name:</label>
-                    <input type="text" id="rate-name" required>
+                    <label for="rate-name">Rate Name:</label>
+                    <input type="text" id="rate-name" placeholder="Enter rate name (e.g., 'Standard Letter')" required>
                 </div>
                 <div class="form-group">
                     <label for="rate-value">Rate (€):</label>
-                    <input type="number" id="rate-value" step="0.01" min="0.01" required>
+                    <input type="number" id="rate-value" step="0.01" min="0.01" placeholder="0.00" required>
+                    <small>Postage cost in euros</small>
                 </div>
                 <div class="form-group">
                     <label for="rate-weight">Max Weight (grams):</label>
-                    <input type="number" id="rate-weight" min="1" value="20" required>
+                    <input type="number" id="rate-weight" min="1" value="20" placeholder="20" required>
+                    <small>Maximum weight for this postage rate</small>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Rate</button>
