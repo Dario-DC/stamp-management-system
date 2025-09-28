@@ -850,3 +850,91 @@ button:focus-visible {
   background-color: #dc2626 !important;
   border-color: #dc2626 !important;
 }
+
+/* Stamp Combinations Styles */
+.combinations-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+}
+
+.combination-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 1rem;
+}
+
+.combination-item:last-child {
+  border-bottom: none;
+}
+
+.combination-description {
+  flex: 1;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.combination-item .btn {
+  white-space: nowrap;
+  min-width: 140px;
+}
+
+/* Dark theme for combinations */
+[data-theme="dark"] .combinations-list {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+[data-theme="dark"] .combination-item {
+  border-bottom-color: #4b5563;
+}
+
+[data-theme="dark"] .combination-description {
+  color: #e5e7eb;
+}
+
+/* Card actions spacing */
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card-actions .btn {
+  flex: 1;
+  min-width: 60px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .combination-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .combination-description {
+    text-align: center;
+    word-break: break-all;
+  }
+  
+  .combination-item .btn {
+    min-width: auto;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+  }
+  
+  .card-actions .btn {
+    min-width: auto;
+  }
+}
