@@ -45,6 +45,11 @@ class StampManager {
     render() {
         this.container.innerHTML = `
             <div class="stamp-manager">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span id="theme-icon">🌙</span>
+                </button>
+                
                 <h1>🏷️ Stamp Management System</h1>
                 
                 <div class="api-status">
@@ -91,9 +96,15 @@ class StampManager {
         `;
 
         this.attachEventListeners();
+        this.initializeTheme();
     }
 
     attachEventListeners() {
+        // Theme toggle
+        this.container.querySelector('#theme-toggle').addEventListener('click', () => {
+            this.toggleTheme();
+        });
+
         // Tab switching
         this.container.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -216,6 +227,47 @@ class StampManager {
             `<div class="error-state">❌ ${message}</div>`;
         this.container.querySelector('#rates-container').innerHTML = 
             `<div class="error-state">❌ ${message}</div>`;
+    }
+
+    toggleTheme() {
+        const htmlElement = document.documentElement;
+        const themeIcon = this.container.querySelector('#theme-icon');
+        const currentTheme = htmlElement.getAttribute('data-theme');
+        
+        let newTheme;
+        if (currentTheme === 'dark') {
+            newTheme = 'light';
+            themeIcon.textContent = '🌙';
+        } else {
+            newTheme = 'dark';
+            themeIcon.textContent = '☀️';
+        }
+        
+        htmlElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        console.log(`Theme switched to: ${newTheme}`);
+    }
+
+    initializeTheme() {
+        const htmlElement = document.documentElement;
+        const themeIcon = this.container.querySelector('#theme-icon');
+        
+        // Check for saved theme preference or default to system preference
+        const savedTheme = localStorage.getItem('theme');
+        let theme;
+        
+        if (savedTheme) {
+            theme = savedTheme;
+        } else {
+            // Check system preference
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        
+        htmlElement.setAttribute('data-theme', theme);
+        themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        
+        console.log(`Theme initialized to: ${theme}`);
     }
 
     showAddStampModal() {
