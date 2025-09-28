@@ -236,8 +236,8 @@ class StampManager {
                         <span>Lire (₤)</span>
                     </label>
                     <label class="radio-option">
-                        <input type="radio" name="currency-type" value="TARIFFA">
-                        <span>Tariffa</span>
+                        <input type="radio" name="currency-type" value="POSTAGE_RATE">
+                        <span>Postage Rate</span>
                     </label>
                 </div>
             </div>
@@ -253,7 +253,7 @@ class StampManager {
                 </div>
 
                 <!-- Postage Rate Selection Fields -->
-                <div id="tariffa-fields" class="entry-fields hidden">
+                <div id="postage-rate-fields" class="entry-fields hidden">
                     <div class="form-group">
                         <label for="postage-rate-select">Select Postage Rate:</label>
                         <select id="postage-rate-select">
@@ -290,7 +290,7 @@ class StampManager {
         const form = this.container.querySelector('#add-stamp-form');
         const currencyTypeRadios = this.container.querySelectorAll('input[name="currency-type"]');
         const currencyFields = this.container.querySelector('#currency-fields');
-        const tariffaFields = this.container.querySelector('#tariffa-fields');
+        const postageRateFields = this.container.querySelector('#postage-rate-fields');
         const stampValueInput = this.container.querySelector('#stamp-value');
         const postageRateSelect = this.container.querySelector('#postage-rate-select');
 
@@ -301,10 +301,10 @@ class StampManager {
                 const hint = this.container.querySelector('#currency-hint');
                 const valueLabel = this.container.querySelector('label[for="stamp-value"]');
                 
-                if (currencyType === 'TARIFFA') {
-                    // Show tariffa fields, hide currency fields
+                if (currencyType === 'POSTAGE_RATE') {
+                    // Show postage rate fields, hide currency fields
                     currencyFields.classList.add('hidden');
-                    tariffaFields.classList.remove('hidden');
+                    postageRateFields.classList.remove('hidden');
                     
                     // Update required fields
                     stampValueInput.required = false;
@@ -313,9 +313,9 @@ class StampManager {
                     // Clear value field
                     stampValueInput.value = '';
                 } else {
-                    // Show currency fields, hide tariffa fields
+                    // Show currency fields, hide postage rate fields
                     currencyFields.classList.remove('hidden');
-                    tariffaFields.classList.add('hidden');
+                    postageRateFields.classList.add('hidden');
                     
                     // Update required fields
                     stampValueInput.required = true;
@@ -346,7 +346,7 @@ class StampManager {
             });
         });
 
-        // Handle postage rate selection (for tariffa)
+        // Handle postage rate selection (for postage rate)
         postageRateSelect.addEventListener('change', (e) => {
             const selectedOption = e.target.selectedOptions[0];
             if (selectedOption && selectedOption.value) {
@@ -413,7 +413,7 @@ class StampManager {
 
             let name, value, currency, postageRateId = null;
 
-            if (currencyType === 'TARIFFA') {
+            if (currencyType === 'POSTAGE_RATE') {
                 // Postage rate selection
                 const postageRateSelect = this.container.querySelector('#postage-rate-select');
                 const selectedRateName = postageRateSelect.value;

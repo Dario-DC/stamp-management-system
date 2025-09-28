@@ -280,7 +280,7 @@ describe('StampManager Integration', () => {
       addRateBtn.click()
       
       // Fill form
-      container.querySelector('#rate-name').value = 'Priority'
+      container.querySelector('#rate-name').value = '2.00'
       container.querySelector('#rate-value').value = '2.00'
       container.querySelector('#rate-weight').value = '20'
       
@@ -289,7 +289,7 @@ describe('StampManager Integration', () => {
       await form.dispatchEvent(new Event('submit'))
       
       // Check API was called with new signature including max weight
-      expect(api.addPostageRate).toHaveBeenCalledWith('Priority', 2, 20)
+      expect(api.addPostageRate).toHaveBeenCalledWith('2.00', 2, 20)
     })
 
     it('should delete stamps when confirmed', async () => {

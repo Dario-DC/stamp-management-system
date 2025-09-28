@@ -24,7 +24,7 @@ INSERT OR IGNORE INTO stamps (name, value, currency, n, postage_rate_id) VALUES
     ('B Zona 1', 1.35, 'EUR', 10, 4),
     
     -- Standalone stamps (no postage rate reference)
-    ('Commemorative Europe Stamp', 1.50, 'EUR', 30, NULL),
-    ('Vintage Classic Stamp', 180, 'ITL', 40, NULL),
-    ('Special Olympics Stamp', 2.20, 'EUR', 20, NULL),
-    ('Heritage Building Stamp', 500, 'ITL', 15, NULL);
+    ('€1.50', 1.50, 'EUR', 30, NULL),
+    ('₤180', 180, 'ITL', 40, NULL),
+    ('€2.20', 2.20, 'EUR', 20, NULL),
+    ('₤500', 500, 'ITL', 15, NULL);
