@@ -152,20 +152,15 @@ class StampManager {
                         <div class="card-header">
                             <h3>${stamp.name}</h3>
                             <div class="card-actions">
-                                <button class="btn btn-sm btn-danger" onclick="stampManager.deleteStamp(${stamp.id})">Delete</button>
+                                <button class="btn btn-sm btn-danger" onclick="stampManager.showDeleteModal(${stamp.id}, '${stamp.name}', ${stamp.n})">Delete</button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <p><strong>Value:</strong> ${stamp.currency === 'ITL' ? 
-                                'L. ' + (stamp.value ? stamp.value.toFixed(0) : '0') + ' (€' + (stamp.euro_cents ? (stamp.euro_cents / 100).toFixed(2) : '0.00') + ')' : 
-                                stamp.postage_rate_name ? 
-                                    stamp.postage_rate_name + ' (€' + (stamp.value ? stamp.value.toFixed(2) : '0.00') + ')' :
-                                    '€' + (stamp.value ? stamp.value.toFixed(2) : '0.00')}</p>
-                            <p><strong>Currency:</strong> ${stamp.currency === 'ITL' ? 'Italian Lira' : 'Euro'}</p>
                             <p><strong>Quantity:</strong> ${stamp.n}</p>
                             <p><strong>Total Value (EUR):</strong> €${stamp.currency === 'ITL' ? 
                                 ((stamp.value * stamp.n) / 1936.27).toFixed(2) : 
-                                stamp.euro_cents ? ((stamp.euro_cents * stamp.n) / 100).toFixed(2) : '0.00'}</p>
+                                stamp.euro_cents ? ((stamp.euro_cents * stamp.n) / 100).toFixed(2) : 
+                                ((stamp.value * stamp.n)).toFixed(2)}</p>
                         </div>
                     </div>
                 `).join('')}
@@ -227,28 +222,59 @@ class StampManager {
         const modalBody = this.container.querySelector('#modal-body');
         modalBody.innerHTML = `
             <h3>Add New Stamp</h3>
+            
+            <!-- Currency Type Selection -->
+            <div class="form-group">
+                <label>Currency Type:</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="currency-type" value="EUR" checked>
+                        <span>Euro (€)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="currency-type" value="ITL">
+                        <span>Lire (₤)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="currency-type" value="POSTAGE_RATE">
+                        <span>Postage Rate</span>
+                    </label>
+                </div>
+            </div>
+
             <form id="add-stamp-form">
-                <div class="form-group">
-                    <label for="stamp-name">Stamp Name:</label>
-                    <input type="text" id="stamp-name" placeholder="Enter stamp name (e.g., 'Christmas 2024')" required>
+                <!-- Euro/Lire Fields -->
+                <div id="currency-fields" class="entry-fields">
+                    <div class="form-group">
+                        <label for="stamp-value">Value (€):</label>
+                        <input type="number" id="stamp-value" step="0.01" min="0.01" placeholder="0.00" required>
+                        <small id="currency-hint">Enter value in Euros (e.g., 2.50 for €2.50)</small>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="stamp-currency">Currency:</label>
-                    <select id="stamp-currency" required>
-                        <option value="EUR">Euro (€)</option>
-                        <option value="ITL">Italian Lira (L.)</option>
-                    </select>
+
+                <!-- Postage Rate Selection Fields -->
+                <div id="postage-rate-fields" class="entry-fields hidden">
+                    <div class="form-group">
+                        <label for="postage-rate-select">Select Postage Rate:</label>
+                        <select id="postage-rate-select">
+                            <option value="">-- Select a postage rate --</option>
+                            ${this.rates.map(rate => `
+                                <option value="${rate.name}" data-value="${rate.value}" data-id="${rate.id}">
+                                    ${rate.name} - €${rate.value ? rate.value.toFixed(2) : '0.00'}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <small>The stamp name and value will be set based on the selected rate</small>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="stamp-value">Value (€):</label>
-                    <input type="number" id="stamp-value" step="0.01" min="0.01" placeholder="0.00" required>
-                    <small id="currency-hint">Enter value in selected currency</small>
-                </div>
+
+                <!-- Common Fields -->
                 <div class="form-group">
                     <label for="stamp-quantity">Quantity:</label>
                     <input type="number" id="stamp-quantity" min="1" value="1" placeholder="1" required>
                     <small>Number of stamps to add to collection</small>
                 </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Stamp</button>
                     <button type="button" class="btn" onclick="stampManager.hideModal()">Cancel</button>
@@ -256,25 +282,89 @@ class StampManager {
             </form>
         `;
 
-        this.container.querySelector('#add-stamp-form').addEventListener('submit', async (e) => {
+        this.setupAddStampModalListeners();
+        this.showModal();
+    }
+
+    setupAddStampModalListeners() {
+        const form = this.container.querySelector('#add-stamp-form');
+        const currencyTypeRadios = this.container.querySelectorAll('input[name="currency-type"]');
+        const currencyFields = this.container.querySelector('#currency-fields');
+        const postageRateFields = this.container.querySelector('#postage-rate-fields');
+        const stampValueInput = this.container.querySelector('#stamp-value');
+        const postageRateSelect = this.container.querySelector('#postage-rate-select');
+
+        // Handle currency type changes
+        currencyTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const currencyType = e.target.value;
+                const hint = this.container.querySelector('#currency-hint');
+                const valueLabel = this.container.querySelector('label[for="stamp-value"]');
+                
+                if (currencyType === 'POSTAGE_RATE') {
+                    // Show postage rate fields, hide currency fields
+                    currencyFields.classList.add('hidden');
+                    postageRateFields.classList.remove('hidden');
+                    
+                    // Update required fields
+                    stampValueInput.required = false;
+                    postageRateSelect.required = true;
+                    
+                    // Clear value field
+                    stampValueInput.value = '';
+                } else {
+                    // Show currency fields, hide postage rate fields
+                    currencyFields.classList.remove('hidden');
+                    postageRateFields.classList.add('hidden');
+                    
+                    // Update required fields
+                    stampValueInput.required = true;
+                    postageRateSelect.required = false;
+                    postageRateSelect.value = '';
+                    
+                    // Update field based on currency type
+                    if (currencyType === 'ITL') {
+                        hint.textContent = 'Enter value in Italian Lire (e.g., 500 for L. 500)';
+                        valueLabel.textContent = 'Value (₤):';
+                        // Change input to only allow integers for Italian Lira
+                        stampValueInput.step = '1';
+                        stampValueInput.min = '1';
+                        stampValueInput.placeholder = '500';
+                        // Clear current value if it's decimal to avoid confusion
+                        if (stampValueInput.value && stampValueInput.value.includes('.')) {
+                            stampValueInput.value = '';
+                        }
+                    } else {
+                        hint.textContent = 'Enter value in Euros (e.g., 2.50 for €2.50)';
+                        valueLabel.textContent = 'Value (€):';
+                        // Change input to allow decimals for Euros
+                        stampValueInput.step = '0.01';
+                        stampValueInput.min = '0.01';
+                        stampValueInput.placeholder = '0.00';
+                    }
+                }
+            });
+        });
+
+        // Handle postage rate selection (for postage rate)
+        postageRateSelect.addEventListener('change', (e) => {
+            const selectedOption = e.target.selectedOptions[0];
+            if (selectedOption && selectedOption.value) {
+                // Auto-fill value with the rate value (for display purposes)
+                const rateValue = selectedOption.getAttribute('data-value');
+                stampValueInput.value = rateValue;
+            }
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.handleAddStamp(e);
         });
 
-        // Update currency hint when currency changes
-        this.container.querySelector('#stamp-currency').addEventListener('change', (e) => {
-            const hint = this.container.querySelector('#currency-hint');
-            const valueLabel = this.container.querySelector('label[for="stamp-value"]');
-            if (e.target.value === 'ITL') {
-                hint.textContent = 'Enter value in Italian Lire (e.g., 500 for L. 500)';
-                valueLabel.textContent = 'Value (L.):';
-            } else {
-                hint.textContent = 'Enter value in Euros (e.g., 2.50 for €2.50)';
-                valueLabel.textContent = 'Value (€):';
-            }
-        });
-
-        this.showModal();
+        // Initialize the form state - EUR is checked by default
+        stampValueInput.required = true;
+        postageRateSelect.required = false;
     }
 
     showAddRateModal() {
@@ -313,25 +403,61 @@ class StampManager {
 
     async handleAddStamp(e) {
         try {
-            const name = this.container.querySelector('#stamp-name').value.trim();
-            const currency = this.container.querySelector('#stamp-currency').value;
-            const value = parseFloat(this.container.querySelector('#stamp-value').value);
+            const currencyType = this.container.querySelector('input[name="currency-type"]:checked').value;
             const quantity = parseInt(this.container.querySelector('#stamp-quantity').value);
-
-            // Basic client-side validation
-            if (!name) {
-                throw new Error('Stamp name is required');
-            }
-            if (isNaN(value) || value <= 0) {
-                throw new Error('Valid stamp value is required');
-            }
+            
+            // Basic quantity validation
             if (isNaN(quantity) || quantity <= 0) {
                 throw new Error('Valid quantity is required');
             }
 
-            console.log('Adding stamp with data:', { name, value, currency, quantity });
+            let name, value, currency, postageRateId = null;
+
+            if (currencyType === 'POSTAGE_RATE') {
+                // Postage rate selection
+                const postageRateSelect = this.container.querySelector('#postage-rate-select');
+                const selectedRateName = postageRateSelect.value;
+                
+                if (!selectedRateName) {
+                    throw new Error('Please select a postage rate');
+                }
+
+                // Get the selected option to access data attributes
+                const selectedOption = postageRateSelect.selectedOptions[0];
+                const rateId = selectedOption.getAttribute('data-id');
+                const rateValue = selectedOption.getAttribute('data-value');
+
+                if (!rateId) {
+                    throw new Error('Selected postage rate ID not found');
+                }
+
+                name = selectedRateName;
+                value = parseFloat(rateValue);
+                currency = 'EUR'; // Postage rates are always in EUR
+                postageRateId = parseInt(rateId); // Use the numeric ID from the database
+            } else {
+                // Euro or Lire entry
+                const inputValue = parseFloat(this.container.querySelector('#stamp-value').value);
+                
+                if (isNaN(inputValue) || inputValue <= 0) {
+                    throw new Error('Valid stamp value is required');
+                }
+
+                value = inputValue;
+                currency = currencyType; // 'EUR' or 'ITL'
+                
+                // Generate name from value based on currency
+                if (currencyType === 'EUR') {
+                    name = `€${value.toFixed(2)}`;
+                } else { // ITL
+                    name = `₤${Math.round(value)}`;
+                }
+            }
+
+            console.log('Adding stamp with data:', { name, value, currency, quantity, postageRateId });
             
-            await api.addStampToCollection(name, value, currency, quantity);
+            // Call API with postage_rate_id if applicable
+            await api.addStampToCollection(name, value, currency, quantity, postageRateId);
             await this.loadData();
             this.hideModal();
         } catch (error) {
@@ -355,15 +481,66 @@ class StampManager {
         }
     }
 
-    async deleteStamp(id) {
-        if (confirm('Are you sure you want to delete this stamp?')) {
-            try {
-                await api.deleteStampFromCollection(id);
-                await this.loadData();
-            } catch (error) {
-                console.error('Failed to delete stamp:', error);
-                alert('Failed to delete stamp: ' + error.message);
+    showDeleteModal(id, name, currentQuantity) {
+        // If there's only one stamp, show simple confirmation
+        if (currentQuantity === 1) {
+            if (confirm(`Are you sure you want to delete the stamp "${name}"?`)) {
+                this.deleteStamp(id, name, currentQuantity, 1);
             }
+            return;
+        }
+
+        // For multiple stamps, show quantity selection modal
+        const modal = document.getElementById('modal');
+        const modalBody = document.getElementById('modal-body');
+        
+        modalBody.innerHTML = `
+            <h2>Delete Stamps</h2>
+            <form id="delete-form">
+                <div class="form-group">
+                    <label>Stamp: <strong>${name}</strong></label>
+                    <p>Current quantity: <strong>${currentQuantity}</strong></p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="delete-quantity">Quantity to delete:</label>
+                    <input type="number" id="delete-quantity" min="1" max="${currentQuantity}" value="1" required>
+                    <small>Enter the number of stamps to delete (max: ${currentQuantity})</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-danger">Delete Stamps</button>
+                    <button type="button" class="btn btn-secondary" onclick="stampManager.hideModal()">Cancel</button>
+                </div>
+            </form>
+        `;
+        
+        modal.classList.remove('hidden');
+        
+        // Handle form submission
+        document.getElementById('delete-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const quantityToDelete = parseInt(document.getElementById('delete-quantity').value);
+            await this.deleteStamp(id, name, currentQuantity, quantityToDelete);
+        });
+    }
+
+    async deleteStamp(id, name, currentQuantity, quantityToDelete) {
+        try {
+            if (quantityToDelete >= currentQuantity) {
+                // Delete the entire stamp entry
+                await api.deleteStampFromCollection(id);
+            } else {
+                // Update the stamp quantity by subtracting the deleted amount
+                const newQuantity = currentQuantity - quantityToDelete;
+                await api.updateStampQuantity(id, newQuantity);
+            }
+            
+            this.hideModal();
+            await this.loadData();
+        } catch (error) {
+            console.error('Failed to delete stamp:', error);
+            alert('Failed to delete stamp: ' + error.message);
         }
     }
 

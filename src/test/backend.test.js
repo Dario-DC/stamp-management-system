@@ -78,8 +78,8 @@ describe('Stamp Management API Integration Tests', () => {
             const rateNames = data.map(rate => rate.name);
             expect(rateNames).toContain('A');
             expect(rateNames).toContain('B');
-            expect(rateNames).toContain('A1');
-            expect(rateNames).toContain('B1');
+            expect(rateNames).toContain('A Zona 1');
+            expect(rateNames).toContain('B Zona 1');
         });
     });
 
@@ -95,7 +95,7 @@ describe('Stamp Management API Integration Tests', () => {
 
         it('should add a new stamp', async () => {
             const newStamp = {
-                name: 'Test Stamp Vitest',
+                name: '€1.00',
                 value: 1.00,
                 currency: 'EUR',
                 n: 5
@@ -137,7 +137,7 @@ describe('Stamp Management API Integration Tests', () => {
             // First add a stamp
             const { data: newStamp } = await apiRequest('/api/stamps/collection', {
                 method: 'POST',
-                body: JSON.stringify({ name: 'Delete Test Vitest', value: 2.00, currency: 'EUR', n: 1 })
+                body: JSON.stringify({ name: '€2.00', value: 2.00, currency: 'EUR', n: 1 })
             });
 
             const stampId = newStamp.id;
@@ -162,6 +162,52 @@ describe('Stamp Management API Integration Tests', () => {
             });
 
             expect(response.status).toBe(400);
+        });
+
+        it('should update quantity when adding the same stamp twice', async () => {
+            // Add a stamp first time
+            const stampData = {
+                name: '€2.00',
+                value: 2.00,
+                currency: 'EUR',
+                n: 3
+            };
+
+            const { response: response1, data: data1 } = await apiRequest('/api/stamps/collection', {
+                method: 'POST',
+                body: JSON.stringify(stampData)
+            });
+            expect(response1.status).toBe(201);
+            expect(data1).toMatchObject({
+                name: '€2.00',
+                value: 2.00,
+                currency: 'EUR',
+                n: 3
+            });
+
+            const firstStampId = data1.id;
+
+            // Add the same stamp again (same name and currency)
+            const { response: response2, data: data2 } = await apiRequest('/api/stamps/collection', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: '€2.00',
+                    value: 2.00,
+                    currency: 'EUR',
+                    n: 2
+                })
+            });
+
+            // Should return the same stamp with updated quantity
+            expect(response2.status).toBe(201);
+            expect(data2.id).toBe(firstStampId);
+            expect(data2.n).toBe(5); // 3 + 2
+
+            // Verify there's still only one stamp with this name and currency
+            const { data: allStamps } = await apiRequest('/api/stamps/collection');
+            const euroStamps = allStamps.filter(s => s.name === '€2.00' && s.currency === 'EUR');
+            expect(euroStamps).toHaveLength(1);
+            expect(euroStamps[0].n).toBe(5);
         });
     });
 
