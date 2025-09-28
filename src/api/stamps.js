@@ -117,6 +117,19 @@ class StampAPI {
         });
     }
 
+    async updateRateById(id, name, value, max_weight) {
+        return this.request(`/stamps/postage-rates/id/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, value, max_weight })
+        });
+    }
+
+    async deleteRateById(id) {
+        return this.request(`/stamps/postage-rates/id/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
     // Additional methods for the updated schema
     async getStampById(id) {
         return this.request(`/stamps/collection/${id}`);
@@ -339,6 +352,20 @@ class MockStampAPI extends StampAPI {
                     this.data.postageRates.push(newRate);
                     return newRate;
                 }
+            }
+        } else if (endpoint.startsWith('/stamps/postage-rates/id/')) {
+            const id = parseInt(endpoint.split('/').pop());
+            const rateIndex = this.data.postageRates.findIndex(r => r.id === id);
+            
+            if (method === 'PUT' && rateIndex !== -1) {
+                this.data.postageRates[rateIndex] = {
+                    ...this.data.postageRates[rateIndex],
+                    ...body,
+                    updated_at: new Date().toISOString()
+                };
+                return this.data.postageRates[rateIndex];
+            } else if (method === 'DELETE' && rateIndex !== -1) {
+                return this.data.postageRates.splice(rateIndex, 1)[0];
             }
         }
 

@@ -4,6 +4,7 @@
  */
 
 import api from './api/stamps.js';
+import { findStampCombinations, formatCombination } from './stampCombinations.js';
 
 class StampManager {
     constructor(containerId) {
@@ -190,11 +191,12 @@ class StampManager {
         container.innerHTML = `
             <div class="data-grid">
                 ${this.rates.map(rate => `
-                    <div class="data-card" data-name="${rate.name}">
+                    <div class="data-card" data-name="${rate.name}" data-id="${rate.id}">
                         <div class="card-header">
                             <h3>${rate.name}</h3>
                             <div class="card-actions">
-                                <button class="btn btn-sm btn-danger" onclick="stampManager.deleteRate('${rate.name}')">Delete</button>
+                                <button class="btn btn-sm btn-primary" onclick="stampManager.showEditRateModal(${rate.id}, '${rate.name}', ${rate.value}, ${rate.max_weight || 20})">Edit</button>
+                                <button class="btn btn-sm btn-secondary" onclick="stampManager.showStampCombinationsModal(${rate.id}, '${rate.name}', ${rate.value})">Select</button>
                             </div>
                         </div>
                         <div class="card-body">
@@ -605,6 +607,177 @@ class StampManager {
                 console.error('Failed to delete rate:', error);
                 alert('Failed to delete rate: ' + error.message);
             }
+        }
+    }
+
+    showEditRateModal(rateId, rateName, rateValue, maxWeight) {
+        const modalBody = this.container.querySelector('#modal-body');
+        modalBody.innerHTML = `
+            <h3>Edit Postage Rate</h3>
+            <form id="edit-rate-form">
+                <div class="form-group">
+                    <label for="edit-rate-name">Rate Name:</label>
+                    <input type="text" id="edit-rate-name" value="${rateName}" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-rate-value">Rate (€):</label>
+                    <input type="number" id="edit-rate-value" step="0.01" min="0.01" value="${rateValue}" required>
+                    <small>Postage cost in euros</small>
+                </div>
+                <div class="form-group">
+                    <label for="edit-rate-weight">Max Weight (grams):</label>
+                    <input type="number" id="edit-rate-weight" min="1" value="${maxWeight}" required>
+                    <small>Maximum weight for this postage rate</small>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update Rate</button>
+                    <button type="button" class="btn btn-danger" onclick="stampManager.deleteRateById(${rateId})">Delete Rate</button>
+                    <button type="button" class="btn" onclick="stampManager.hideModal()">Cancel</button>
+                </div>
+            </form>
+        `;
+
+        this.container.querySelector('#edit-rate-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleEditRate(e, rateId);
+        });
+
+        this.showModal();
+    }
+
+    async handleEditRate(e, rateId) {
+        try {
+            const name = this.container.querySelector('#edit-rate-name').value;
+            const value = parseFloat(this.container.querySelector('#edit-rate-value').value);
+            const maxWeight = parseInt(this.container.querySelector('#edit-rate-weight').value) || 20;
+
+            await api.updateRateById(rateId, name, value, maxWeight);
+            await this.loadData();
+            this.hideModal();
+        } catch (error) {
+            console.error('Failed to update rate:', error);
+            alert('Failed to update rate: ' + error.message);
+        }
+    }
+
+    async deleteRateById(rateId) {
+        if (confirm('Are you sure you want to delete this postage rate?')) {
+            try {
+                await api.deleteRateById(rateId);
+                await this.loadData();
+                this.hideModal();
+            } catch (error) {
+                console.error('Failed to delete rate:', error);
+                alert('Failed to delete rate: ' + error.message);
+            }
+        }
+    }
+
+    showStampCombinationsModal(rateId, rateName, rateValue) {
+        const modalBody = this.container.querySelector('#modal-body');
+        modalBody.innerHTML = `
+            <h3>Stamp Combinations for ${rateName} (€${rateValue.toFixed(2)})</h3>
+            <div id="combinations-content">
+                <div class="loading">Finding stamp combinations...</div>
+            </div>
+        `;
+
+        this.showModal();
+        this.findAndDisplayCombinations(rateValue);
+    }
+
+    async findAndDisplayCombinations(targetValue) {
+        try {
+            const combinations = findStampCombinations(this.stamps, targetValue);
+            const combinationsContent = this.container.querySelector('#combinations-content');
+            
+            if (combinations.length === 0) {
+                combinationsContent.innerHTML = `
+                    <div class="empty-state">
+                        No stamp combinations found that add up to €${targetValue.toFixed(2)}
+                    </div>
+                `;
+                return;
+            }
+
+            combinationsContent.innerHTML = `
+                <p>Found ${combinations.length} combination${combinations.length === 1 ? '' : 's'}:</p>
+                <div class="combinations-list">
+                    ${combinations.map((combination, index) => `
+                        <div class="combination-item">
+                            <div class="combination-description">
+                                ${formatCombination(combination)}
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="stampManager.selectCombination(${index})">
+                                Use This Combination
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="stampManager.hideModal()">Cancel</button>
+                </div>
+            `;
+
+            // Store combinations for later use
+            this.currentCombinations = combinations;
+        } catch (error) {
+            console.error('Failed to find combinations:', error);
+            const combinationsContent = this.container.querySelector('#combinations-content');
+            combinationsContent.innerHTML = `
+                <div class="error-state">
+                    Error finding combinations: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    async selectCombination(combinationIndex) {
+        try {
+            const combination = this.currentCombinations[combinationIndex];
+            
+            if (!combination) {
+                throw new Error('Invalid combination selected');
+            }
+
+            // Show confirmation dialog
+            const combinationText = formatCombination(combination);
+            const totalStamps = combination.stamps.reduce((sum, s) => sum + s.quantity, 0);
+            
+            if (!confirm(`Remove ${totalStamps} stamps from your collection?\n\n${combinationText}`)) {
+                return;
+            }
+
+            // Remove stamps from collection
+            for (const stamp of combination.stamps) {
+                const currentStamp = this.stamps.find(s => s.id === stamp.id);
+                if (!currentStamp) {
+                    throw new Error(`Stamp ${stamp.name} not found in collection`);
+                }
+                
+                if (currentStamp.n < stamp.quantity) {
+                    throw new Error(`Not enough ${stamp.name} stamps available (need ${stamp.quantity}, have ${currentStamp.n})`);
+                }
+
+                const newQuantity = currentStamp.n - stamp.quantity;
+                
+                if (newQuantity === 0) {
+                    // Delete the stamp entirely
+                    await api.deleteStampFromCollection(stamp.id);
+                } else {
+                    // Update the quantity
+                    await api.updateStampQuantity(stamp.id, newQuantity);
+                }
+            }
+
+            // Reload data and close modal
+            await this.loadData();
+            this.hideModal();
+            
+            alert(`Successfully used combination: ${combinationText}`);
+        } catch (error) {
+            console.error('Failed to use combination:', error);
+            alert('Failed to use combination: ' + error.message);
         }
     }
 
